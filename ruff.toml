@@ -1,0 +1,6 @@
+# Catch broken names/imports and syntax errors; avoid stylistic CI churn.
+target-version = "py314"
+include = ["mods/**/*.py", "scripts/**/*.py", "tests/**/*.py"]
+exclude = [".dev", ".research", ".venv", "dist"]
+[lint]
+select = ["F", "E9"]

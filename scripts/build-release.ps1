@@ -4,6 +4,8 @@ $ErrorActionPreference='Stop'
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location $repo
 try {
+    & $Python -m ruff check .
+    if ($LASTEXITCODE -ne 0) { throw 'Correctness lint failed; install requirements-dev-windows.lock' }
     & $Python -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) { throw 'Helper tests failed' }
     node --experimental-vm-modules --test tests/panel.test.mjs
@@ -17,7 +19,7 @@ try {
     $name='herdr-session-hub-'+$version.version+'-windows-x64-'+[DateTime]::UtcNow.ToString('yyyyMMddHHmmss')
     $stage=Join-Path $dist $name
     New-Item -ItemType Directory -Path $stage|Out-Null
-    foreach($file in @('LICENSE','README.md','RECIPE.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','THIRD_PARTY_NOTICES.md','version.json','requirements-windows.lock','preview.png')) {
+    foreach($file in @('LICENSE','README.md','RECIPE.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','THIRD_PARTY_NOTICES.md','version.json','requirements-windows.lock','requirements-dev-windows.lock','ruff.toml','preview.png')) {
         if(Test-Path -LiteralPath (Join-Path $repo $file)) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $stage }
     }
     foreach($folder in @('docs','scripts','tests')) { Copy-Item -LiteralPath (Join-Path $repo $folder) -Destination $stage -Recurse }
@@ -25,7 +27,11 @@ try {
     New-Item -ItemType Directory -Force -Path (Join-Path $mod 'helper')|Out-Null
     foreach($file in @('main.js','model.js','ui.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$file") -Destination $mod }
     Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/icons') -Destination $mod -Recurse
+    Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/assets') -Destination $mod -Recurse
     Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper/hub.py') -Destination (Join-Path $mod 'helper')
+    $adapters=Join-Path $mod 'helper/adapters'
+    New-Item -ItemType Directory -Path $adapters|Out-Null
+    Get-ChildItem -LiteralPath (Join-Path $repo 'mods/session-hub/helper/adapters') -Filter '*.py' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $adapters }
     # Only explicitly locked third-party wheels. No environment, histories, state,
     # research source files, installed SDKs or local runtime.json are bundled.
     $wheels=Join-Path $stage 'wheelhouse'

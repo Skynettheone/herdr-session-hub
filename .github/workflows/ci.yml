@@ -1,5 +1,14 @@
 name: Windows tests
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'ruff.toml', '.github/workflows/ci.yml']
+  pull_request:
+    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'ruff.toml', '.github/workflows/ci.yml']
+  workflow_dispatch:
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -15,7 +24,8 @@ jobs:
         with:
           node-version: '24'
       - run: >-
-          python -m pip install --only-binary=:all: --require-hashes -r requirements-windows.lock
+          python -m pip install --only-binary=:all: --require-hashes -r requirements-windows.lock -r requirements-dev-windows.lock
+      - run: python -m ruff check .
       - run: python -m unittest discover -s tests -v
       - run: node --experimental-vm-modules --test tests/panel.test.mjs
       # Native SDK/GUI acceptance is manual on the installed Herdr release.

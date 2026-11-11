@@ -1,0 +1,2 @@
+# Development-only correctness lint; never bundled into the runtime.
+ruff==0.17.4 --hash=sha256:67c5a894fc054cf41f75f7afa24815de5a74329d97634126c2a1015740ff4e8c

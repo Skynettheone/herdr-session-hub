@@ -6,7 +6,8 @@ Do not commit personal histories, runtime.json, SDK-generated files or state.
 
 ```powershell
 python -m venv .venv
-./.venv/Scripts/python.exe -m pip install --require-hashes -r requirements-windows.lock
+./.venv/Scripts/python.exe -m pip install --require-hashes -r requirements-windows.lock -r requirements-dev-windows.lock
+./.venv/Scripts/python.exe -m ruff check .
 ./.venv/Scripts/python.exe -m unittest discover -s tests -v
 node --experimental-vm-modules --test tests/panel.test.mjs
 herdr-app check mods/session-hub
@@ -19,11 +20,10 @@ agent sandboxes; they require no administrator account. Synthetic sparse files
 exercise 50 MiB, 100 MiB and over 1 GiB histories without allocating their full
 logical size. Tests also exercise actual DPAPI and authenticated encryption.
 
-For a GUI demo, `pwsh -NoProfile -File scripts/start-demo.ps1` creates only `.dev/`
+For a GUI demo, `pwsh -NoProfile -File scripts/start-demo.ps1 -Visible` creates only `.dev/`
 histories. It sets `HERDR_APP_HOME`, `HC_SESSION=test-session-hub` and scratch XDG
 paths. No production config is read or modified. Use the same variables for
-`herdr-app status`, `shot`, and commands. Maximize the isolated window if launched
-hidden. Native `check` covers one render only; interact with the panel as well.
+`herdr-app status`, `shot`, and commands. Use `-Visible` for interactive tests; the default starts a hidden test window. Native `check` covers one render only; interact with the panel as well.
 Stop only this test core/app afterward, never a user's real core.
 
 Prepare the three exact binary wheels under `.research/wheels/`:
@@ -49,3 +49,10 @@ Use conventional commit messages, for example:
 `fix(index): retain stale sessions after an interrupted refresh`.
 Do not add assistant names or assistant-authorship trailers to commit messages.
 No push, production install or publication is part of the development workflow.
+
+CI intentionally runs one Windows job for relevant code changes: pinned runtime
+and dev wheels, correctness lint (F/E9), Python fixtures and native-host mocks.
+Documentation-only pushes do not run it. CodeQL runs both languages in one job
+on relevant main pushes or manually, avoiding duplicate PR/main security scans.
+Stale runs are cancelled. Native SDK/GUI, install smoke and packaging are local
+release checks; no automatic deployment/publication workflow exists.
