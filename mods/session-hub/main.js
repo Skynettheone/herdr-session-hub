@@ -14,6 +14,7 @@ export default class SessionHub extends View {
     this.portable = null;
     this.loading = true; this.width = 380; this.settingsSection = "profiles"; this.detailSection = "conversation";
     this.generation = 0; this.handle = cx.focus_handle();
+    this.previewGeneration = 0; this.reloadPending = false;
     this.search = InputState.new({ placeholder: "Search titles, projects, IDs…" });
     this.alias = InputState.new({ placeholder: "Display alias (Hub only)" });
     this.projectConfirm = InputState.new({ placeholder: "Type the exact project path to trust" });
@@ -25,6 +26,10 @@ export default class SessionHub extends View {
       root: "Absolute session directory", configHome: "Provider config home (account directory)",
       executable: "Absolute CLI .exe", launchScript: "Pi launcher script (optional)" })) {
       this.formFields[name] = InputState.new({ placeholder });
+    }
+    for (const input of [this.search, this.alias, this.projectConfirm, this.profileEditor, this.bundlePath, ...Object.values(this.formFields)]) {
+      input.on("focus",(_event,cx)=>{this.activeInput=input;cx.notify();});
+      input.on("blur",(_event,cx)=>{if(this.activeInput===input)this.activeInput=null;cx.notify();});
     }
     this.search.on("change", (_event, cx) => {
       this.query = this.search.value(); this.offset = 0;
@@ -77,14 +82,35 @@ export default class SessionHub extends View {
       try {
         const result = await this.rpc(request);
         if (then) await then(result, cx);
-        this.data = await this.rpc(requestFor(this));
-        if (this.detail) this.detail = this.data.rows.find(r => r.key === this.detail.key) || null;
+        const snapshot = request.action === "list" ? request : requestFor(this);
+        const data = request.action === "list" ? result : await this.rpc(snapshot);
+        this.publishList(data, snapshot);
       } catch (error) { this.error = safeText(error.message, 500); }
-      finally { this.busy = false; cx.notify(); }
+      finally {
+        this.finishOperation(cx);
+      }
     });
   }
 
-  load(cx) { this.perform(cx, requestFor(this)); }
+  load(cx) {
+    if (this.busy) { this.reloadPending = true; return; }
+    this.perform(cx, requestFor(this));
+  }
+  publishList(data, snapshot) {
+    if (JSON.stringify(snapshot) !== JSON.stringify(requestFor(this))) {
+      this.reloadPending = true;
+      return;
+    }
+    this.data = data;
+    this.reloadPending = false;
+    if (this.detail) this.detail = data.rows.find(row => row.key === this.detail.key) || null;
+  }
+  finishOperation(cx) {
+    this.busy = false;
+    this.scanning = false;
+    if (this.reloadPending) { this.reloadPending = false; this.load(cx); }
+    cx.notify();
+  }
   refresh(cx, content = false) {
     if (this.busy) return;
     this.busy = true; this.scanning = true; this.scanCancelled = false; this.error = "";
@@ -95,14 +121,15 @@ export default class SessionHub extends View {
         let remaining = 0, batches = 0;
         do {
           const result = await this.rpc({ action: "refresh", content });
-          this.data = await this.rpc(requestFor(this));
+          const snapshot = requestFor(this);
+          this.publishList(await this.rpc(snapshot), snapshot);
           remaining = Math.max(0, ...result.statuses.map(s => s.remaining || 0));
           this.notice = "Batch " + (++batches) + " · " + remaining + " sources remaining" + (content ? ". Huge histories may need another index pass." : "");
           cx.notify();
         } while (remaining > 0 && !this.scanCancelled && batches < 2000);
         if (this.scanCancelled) this.notice = "Stopped after the current batch; indexed results are preserved.";
       } catch (error) { this.error = safeText(error.message, 500); }
-      finally { this.busy = false; this.scanning = false; cx.notify(); }
+      finally { this.finishOperation(cx); }
     });
   }
   choose(row, cx) {
@@ -111,11 +138,13 @@ export default class SessionHub extends View {
     this.loadPreview(row,cx);
   }
   loadPreview(row,cx) {
+    const generation = ++this.previewGeneration;
+    const current = () => this.detail?.key === row.key && generation === this.previewGeneration;
     this.previewLoading = true; this.previewError = ""; cx.notify();
     cx.spawn(async cx=>{
-      try { const result=await this.rpc({action:"preview",key:row.key}); if(this.detail?.key===row.key)this.preview=result; }
-      catch(error){if(this.detail?.key===row.key)this.previewError=safeText(error.message,400);}
-      finally {if(this.detail?.key===row.key)this.previewLoading=false;cx.notify();}
+      try { const result=await this.rpc({action:"preview",key:row.key}); if(current())this.preview=result; }
+      catch(error){if(current())this.previewError=safeText(error.message,400);}
+      finally {if(current())this.previewLoading=false;cx.notify();}
     });
   }
   annotate(cx, patch) { this.perform(cx, { action: "annotate", key: this.detail.key, ...patch }); }
@@ -161,15 +190,15 @@ export default class SessionHub extends View {
   key(event, cx) {
     if (event.key === "escape") { this.detail = null; this.settings = false; cx.notify(); }
     if (event.key === "f5") { this.refresh(cx); cx.stop_propagation(); }
-    if ((event.key === "f" && event.modifiers?.control) || event.key === "/") {
+    if ((event.key === "f" && event.modifiers?.control) || (event.key === "/" && !this.activeInput)) {
       this.search.focus(); cx.stop_propagation();
     }
-    if (!this.detail && ["up", "down"].includes(event.key)) {
+    if (!this.activeInput && !this.detail && ["up", "down"].includes(event.key)) {
       const delta = event.key === "up" ? -1 : 1;
       this.selected = Math.max(0, Math.min(this.data.rows.length - 1, (this.selected ?? -1) + delta));
       cx.notify(); cx.stop_propagation();
     }
-    if (event.key === "enter" && !this.detail && this.data.rows[this.selected]) this.choose(this.data.rows[this.selected], cx);
+    if (!this.activeInput && event.key === "enter" && !this.detail && this.data.rows[this.selected]) this.choose(this.data.rows[this.selected], cx);
   }
 
   render(cx) { return renderPanel(this, cx, theme()); }

@@ -198,6 +198,8 @@ class Store:
                 if is_link(self.path) or self.path.stat().st_size > MAX_STATE:
                     raise HubError("State size or path is unsafe")
                 self.db.deserialize(protect(self.path.read_bytes(), True))
+            elif self.path.with_name("state.hub.bak").exists():
+                raise HubError("Current state is missing but a backup exists; run offline recovery")
             self.db.execute("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY,v TEXT NOT NULL)")
             version = self.get("schema", SCHEMA)
             if version not in (1, SCHEMA):
@@ -532,7 +534,7 @@ def scan_file(store, profile, path, root, full=False):
             tail = tail.partition(b"\n")[2]
             for x in records_in(tail)[0]:
                 parse_record(profile["provider"], x, meta)
-        meta["timestampCoverage"] = "complete" if eof else "sampled head/tail"
+        meta["timestampCoverage"] = "complete" if eof and end == len(data) and not bad and not big else "partial head/tail"
     offset = cache.get("offset", 0)
     if full and profile.get("content") and not cache.get("complete"):
         data, eof = read_window(path, offset)
@@ -771,8 +773,17 @@ def list_records(store, request):
         # Literal terms only. No arbitrary MATCH grammar or SQL from input.
         terms = re.findall(r"\w+", query, re.UNICODE)[:12]
         if terms:
-            match = " AND ".join('"' + term.replace('"', '""') + '"' for term in terms)
-            content_keys = {x[0] for x in store.db.execute("SELECT DISTINCT k FROM content WHERE content MATCH ? LIMIT 20000", (match,))}
+            # A conversation spans multiple indexed chunks. Intersect identities,
+            # not chunk rows, so query results do not depend on chunk boundaries.
+            matches = None
+            for term in dict.fromkeys(terms):
+                literal = '"' + term.replace('"', '""') + '"'
+                keys = {x[0] for x in store.db.execute("SELECT DISTINCT k FROM content WHERE content MATCH ? LIMIT 20000", (literal,))}
+                matches = keys if matches is None else matches & keys
+                if not matches:
+                    break
+            content_keys = matches or set()
+    profiles = {profile["id"]: profile for profile in store.get("profiles", [])}
     rows = []
     for record in store.get("records", []):
         annotation = store.get("annotation:" + record["key"], {})
@@ -785,7 +796,8 @@ def list_records(store, request):
         if request.get("profile") and request["profile"] not in record["targets"]:
             continue
         hay = " ".join(str(record.get(x) or "") for x in ("title", "cwd", "nativeId")) + " " + annotation.get("alias", "")
-        if query and query not in unicodedata.normalize("NFKC", hay).casefold() and record["canonicalSourceIdentity"] not in content_keys:
+        content_match = record["canonicalSourceIdentity"] in content_keys and content_search_allowed(record, request, profiles)
+        if query and query not in unicodedata.normalize("NFKC", hay).casefold() and not content_match:
             continue
         rows.append({**record, **annotation, "receipt": store.get("receipt:" + record["key"]),
                      "title": annotation.get("alias") or record.get("title") or "Untitled session"})
@@ -794,6 +806,22 @@ def list_records(store, request):
     return {"rows": rows[offset:offset + 60], "total": len(rows), "offset": offset,
             "profiles": store.get("profiles", []), "statuses": store.get("statuses", []),
             "lastScan": store.get("lastScan"), "schema": SCHEMA}
+
+
+def content_search_allowed(record, request, profiles):
+    """Authorize shared physical-source hits per explicit target's opt-in."""
+    source = Path(record["sourcePath"])
+    for target in record["targets"]:
+        if request.get("profile") and target != request["profile"]:
+            continue
+        profile = profiles.get(target, {})
+        if not profile.get("enabled") or not profile.get("content") or profile.get("provider") != record["provider"]:
+            continue
+        if any(source.is_relative_to(Path(exclusion)) for exclusion in profile.get("excluded", [])):
+            continue
+        if any(source.is_relative_to(Path(root)) for root in profile.get("roots", [])):
+            return True
+    return False
 
 
 def preview(store, key):
@@ -806,10 +834,11 @@ def preview(store, key):
             msg["text"] = msg["text"][:2000]
         return result
     data, eof = read_window(p, 0, CHUNK)
-    rows, _, _, malformed, oversized = records_in(data, eof)
+    rows, consumed, _, malformed, oversized = records_in(data, eof)
+    complete = eof and consumed == len(data) and not malformed and not oversized
     messages, meta = [], {}
     # Pi previews follow active ancestry only when the whole file fits the budget.
-    if r["provider"] == "pi" and eof and r.get("sourceVersion") != "1":
+    if r["provider"] == "pi" and complete and r.get("sourceVersion") != "1":
         entries = [x for x in rows if x.get("type") != "session" and x.get("id")]
         by_id = {x["id"]: x for x in entries}
         branch, seen = [], set()
@@ -830,8 +859,8 @@ def preview(store, key):
                 break
     if before != file_stamp(p):
         raise HubError("Session changed during preview; refresh and retry")
-    return {"messages": messages, "partial": not eof or len(messages) >= 30 or bool(r.get("historyBase")),
-            "branch": "active" if r["provider"] == "pi" and eof else "bounded file excerpt; branch coverage unknown",
+    return {"messages": messages, "partial": not complete or len(messages) >= 30 or bool(r.get("historyBase")),
+            "branch": "active" if r["provider"] == "pi" and complete else "bounded file excerpt; branch coverage unknown",
             "malformed": malformed, "oversized": oversized}
 
 
@@ -1065,7 +1094,7 @@ def rpc(store, req):
         old = store.get(local_key)
         if old and old != item["annotation"] and req.get("conflictChoice") not in ("keep-local", "use-imported"):
             raise HubError("Choose keep-local or use-imported explicitly; no annotation was overwritten")
-        if not old or req.get("conflictChoice") == "use-imported":
+        if req.get("conflictChoice") != "keep-local" and (not old or req.get("conflictChoice") == "use-imported"):
             if old:
                 store.set("annotation-backup:" + digest([local_key, old]), old)
             store.set(local_key, item["annotation"])
@@ -1193,7 +1222,11 @@ def recover(root):
             if current.exists():
                 if is_link(current):
                     raise HubError("Linked recovery target refused")
-                os.replace(current, root / ("damaged-" + uuid.uuid4().hex + ".hub"))
+                if current.stat().st_size > MAX_STATE:
+                    raise HubError("Current state exceeds recovery evidence budget")
+                # Persist evidence without removing current. A failed replacement
+                # must leave the original authoritative state at its normal path.
+                atomic(root / ("damaged-" + uuid.uuid4().hex + ".hub"), current.read_bytes())
             atomic(current, protect(image))
         finally:
             lock.seek(0)

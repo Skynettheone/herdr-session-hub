@@ -81,6 +81,55 @@ class HubTests(unittest.TestCase):
         self.assertTrue((self.state / "state.hub.bak").is_file())
         self.assertFalse(list(self.state.glob("*.tmp")))
 
+    def test_shared_content_search_respects_profile_opt_out(self):
+        opted_in, _ = self.provider(content=True)
+        opted_out = {**opted_in, "id": "private-view", "content": False}
+        with hub.Store(self.state) as store:
+            self.save(store, opted_in)
+            self.save(store, opted_out)
+            hub.refresh(store, True)
+            self.assertEqual(hub.list_records(store, {"query": "zephyr", "fullText": True, "profile": opted_out["id"]})["total"], 0)
+            self.assertEqual(hub.list_records(store, {"query": "zephyr", "fullText": True, "profile": opted_in["id"]})["total"], 1)
+
+    def test_content_terms_can_match_across_index_chunks(self):
+        profile, _ = self.provider(content=True)
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            for term in ("firstchunkword", "secondchunkword"):
+                store.db.execute("INSERT INTO content VALUES (?,?)", (row["canonicalSourceIdentity"], term))
+            self.assertEqual(hub.list_records(store, {"query": "firstchunkword secondchunkword", "fullText": True})["total"], 1)
+
+    def test_record_budget_exhaustion_is_partial(self):
+        profile, path = self.provider()
+        rows = fixture("claude", self.cwd)[:1] + [{"type": "progress"}] * 10000
+        rows += [{"type": "assistant", "timestamp": "2026-11-12T00:00:00Z", "message": {"content": "after record budget"}}]
+        path.write_bytes(encode(rows))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            self.assertNotEqual(row["timestampCoverage"], "complete")
+            self.assertTrue(hub.preview(store, row["key"])["partial"])
+
+    def test_recovery_failure_keeps_current_state(self):
+        with hub.Store(self.state) as store:
+            store.set("keep", "original")
+        with hub.Store(self.state) as store:
+            store.set("newer", True)
+        before = (self.state / "state.hub").read_bytes()
+        with patch.object(hub, "atomic", side_effect=OSError("interrupted replacement")):
+            with self.assertRaises(OSError):
+                hub.recover(self.state)
+        self.assertEqual((self.state / "state.hub").read_bytes(), before)
+
+    def test_keep_local_never_applies_an_absent_annotation(self):
+        profile, _ = self.provider()
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            item = {"origin": "b" * 64, "provider": "claude", "nativeId": ID, "annotation": {"alias": "Incoming"}}
+            portable_key = "foreign:" + hub.digest(item)
+            store.set(portable_key, item)
+            hub.rpc(store, {"action": "portable-apply", "key": row["key"], "portableKey": portable_key, "conflictChoice": "keep-local"})
+            self.assertIsNone(store.get("annotation:" + row["key"]))
+
     def test_all_file_providers_original_hashes(self):
         for provider in ("claude", "codex", "pi"):
             with self.subTest(provider=provider):
@@ -234,7 +283,7 @@ class HubTests(unittest.TestCase):
             with hub.Store(self.state) as store:
                 row = self.scan(store, p)
                 self.assertEqual(row["nativeId"], ID)
-                self.assertEqual(row["timestampCoverage"], "sampled head/tail")
+                self.assertEqual(row["timestampCoverage"], "partial head/tail")
                 self.assertTrue(hub.preview(store, row["key"])["partial"])
             _, peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()

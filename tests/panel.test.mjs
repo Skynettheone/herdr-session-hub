@@ -20,6 +20,7 @@ async function panel() {
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', nativeId:'11111111-2222-4333-8444-555555555555'};
   let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',enabled:true,versionVerified:true}],statuses:[]};
   let fail = false;
+  let listHook = async () => {};
   function element(initial) {
     let id=initial;
     let proxy;
@@ -53,6 +54,7 @@ async function panel() {
       const req=JSON.parse(args.at(-1));requests.push(req);
       if(fail)return {code:1,stdout:JSON.stringify({ok:false,error:'Synthetic failure'})};
       let result=data;
+      if(req.action==='list') { result={...data,querySnapshot:req.query||''};await listHook(req); }
       if(req.action==='preview')result={messages:[{role:'user',text:'literal $(text)'}],partial:true};
       if(req.action==='resume')result={argv:['python.exe','literal arg'],folder:'C:/Project'};
       if(req.action==='refresh')result={advanced:1,statuses:[]};
@@ -75,7 +77,7 @@ async function panel() {
   async function flush(){while(pending.length){const p=pending.shift();await p;}}
   function draw(){controls.clear();styles.length=0;view.render(cx);}
   async function click(id){draw();assert.ok(controls.has(id),`visible control ${id}`);controls.get(id)({},cx);await flush();draw();}
-  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,setTheme(p){palette=p;},setFail(v){fail=v;}};
+  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
 }
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{
@@ -149,4 +151,26 @@ test('semantic theme switching and responsive conversation layout',async()=>{
   assert.ok(p.view.detail);assert.ok(p.view.preview?.messages.length);
   p.view.width=360;p.draw();await p.click('back');assert.equal(p.view.detail,null);
   assert.equal(shortTime(null),'Time unknown');
+});
+
+test('latest search survives an in-flight list and a final refresh batch',async()=>{
+  for(const refresh of [false,true]) {
+    const p=await panel();let changed=false;
+    p.setListHook(async request=>{
+      if(request.query==='old'&&!changed){changed=true;p.view.query='latest';p.view.load(p.cx);}
+    });
+    p.view.query='old';
+    if(refresh)p.view.refresh(p.cx);else p.view.load(p.cx);
+    await p.flush();
+    assert.equal(p.view.data.querySnapshot,'latest');
+    assert.equal(p.view.busy,false);
+  }
+});
+
+test('typing path separators or arrows does not navigate away from a field',async()=>{
+  const p=await panel();let focused=0;
+  p.view.search.focus=()=>{focused++;};
+  p.view.activeInput=p.view.formFields.root;
+  p.view.key({key:'/'},p.cx);p.view.key({key:'down'},p.cx);
+  assert.equal(focused,0);assert.equal(p.view.selected,undefined);
 });
