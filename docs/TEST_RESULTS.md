@@ -79,7 +79,16 @@ release gate.
   light-theme and narrow-width acceptance.
 - Actual Herdr updater persistence, full rollback through a real app upgrade,
   macOS/Linux, WSL/UNC, signed helper distribution or independent security audit.
-- Hosted CI/CodeQL execution: workflow files are prepared; nothing was pushed.
+
+## Hosted validation after the authorized push
+
+On commit `b320575`, [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43084706399)
+completed successfully. [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43084706351)
+completed successfully for Python and JavaScript/TypeScript. This records job
+completion, not an assertion that no security alerts exist or an independent audit.
+The first Windows workflow was rejected before tests because a YAML plain scalar
+contained the pip `--only-binary=:all:` flag; a focused CI commit changed it to a
+block scalar, and the corrected workflow passed.
 
 Local package/install/uninstall verification is recorded in RELEASE_REPORT.md.
 No production installation or original deletion was performed. The folder was not

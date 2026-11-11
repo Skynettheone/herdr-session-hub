@@ -67,5 +67,7 @@ Active detection intentionally over-blocks and is not proof of ownership absence
 for renamed/custom provider builds. Precise native locks/registry integrations
 remain a release gate. Actual provider continuation, account separation and update
 persistence are not verified. Imported native transcripts, destructive original
-operations and remote endpoints are not implemented. No source data was deleted,
-production mod installed, repository pushed or release published.
+operations and remote endpoints are not implemented. No source data was deleted
+or production mod installed. The user later explicitly authorized source commits
+and a push to their GitHub origin; no GitHub Release or gallery publication was
+performed.

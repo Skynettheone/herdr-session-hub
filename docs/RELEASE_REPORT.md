@@ -42,3 +42,6 @@ Git is initialized on `main` with the user-specified origin. Logical conventiona
 commits are authored with the existing Git identity, without assistant names or
 authorship trailers. The user subsequently authorized pushing `main`; this does
 not authorize a production installation or a GitHub/gallery release.
+
+The authorized source push succeeded. Windows CI and both CodeQL language jobs
+passed on the corrected CI commit; direct run links are in TEST_RESULTS.md.
