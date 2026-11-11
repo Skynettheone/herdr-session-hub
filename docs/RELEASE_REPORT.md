@@ -13,14 +13,15 @@ Classification: **0.1.0-dev, Windows x64 development candidate**.
   sentinels. All targets were disposable directories under this repository.
 - Provider originals and production Herdr configuration were not installation
   targets. No GitHub Release or gallery listing was created.
-- GUI automation was stopped by the user. Remaining native visual/theme and
-  continuation acceptance gates are explicit in FEATURE_STATUS.md.
+- The renewed visible GUI pass verified search/filter/preview/settings, multiple
+  panes, narrow navigation and dark/light/custom-theme rendering. Exhaustive native
+  controls and actual continuation remain open in FEATURE_STATUS.md.
 
 ## Bundle contents and verification
 
 `scripts/build-release.ps1 -AllowUnverified` produces an explicitly named local
 development ZIP and SHA-256 sidecar under `dist/`. It includes mod/helper source,
-native SVG assets, tests, scripts, documentation, the genuine initial-render
+native SVG assets and artwork license, tests, scripts, documentation, genuine populated
 preview and the three locked offline dependency wheels. Each payload file has a
 SHA-256 entry in `SHA256SUMS.txt`. Source state, user paths/runtime.json, research
 repositories, environments, SDK-generated declarations and provider histories

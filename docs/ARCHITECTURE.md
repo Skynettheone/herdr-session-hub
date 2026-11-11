@@ -57,3 +57,15 @@
 - Personal mod lives at `~/.config/herdr-app/mods/session-hub/`. Shipped Herdr mods may change during Herdr upgrades; personal copies persist.
 - On startup check expected API capabilities, display diagnostic and disable affected actions on incompatibility.
 - Run `herdr-app check` and interactive smoke tests after upgrading the app; support rollback to last tagged working release.
+
+## Implemented reader boundary
+
+`helper/adapters/` contains independent Claude/Codex/Pi/Copilot/Gemini readers and
+shared conversation-only normalization. A fixed local package loader preserves
+Python `-I` isolation without adding cwd or provider paths to imports. The helper
+retains bounded file/SQLite I/O, DPAPI store, profile validation and launch policy.
+Gemini projection runs only on complete bounded input; its append operations can
+remove text, so every file generation replaces indexed text. OpenCode's immutable
+reader refuses WAL and has its own fixture coverage. Live native catalog artwork
+is display metadata only; no agent-provided `run` vector becomes a guessed resume
+command. Each resumed session still uses its audited provider-specific contract.

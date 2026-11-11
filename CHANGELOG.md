@@ -15,3 +15,16 @@
 - Kept original deletion, native migration and remote sync unavailable.
 - Production release remains blocked on native context-continuation checks,
   precise active ownership, update validation and independent review.
+
+### Quality and catalog follow-up
+
+- Added Copilot root-event history and bounded Gemini JSON/JSONL replay, with
+  rewind/patch/removal handling and explicit unsupported states.
+- Added the live Herdr agent catalog, official sheep artwork with retained
+  license, and native provider icons/chips respecting full-color/tint rules.
+- Fixed profile-specific FTS privacy, terms across chunks, dropped/stale search
+  results (including startup/refresh), focus shortcuts, atomic recovery and
+  keep-local import choices.
+- Fixed native conversation height/typography and gated Continue prerequisites.
+- Added pinned correctness lint and reduced CI to relevant Windows checks and
+  one main-branch CodeQL job, with stale-run cancellation.

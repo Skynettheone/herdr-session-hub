@@ -6,9 +6,9 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
 | ID | Implementation and verified scope | Remaining limits |
 |---|---|---|
 | F01 | User-invoked native command detection; explicit profiles; missing CLI does not hide history | Help/version verified locally; no default home scan |
-| F02 | Four independent adapters; native IDs, cwd, source/profile, times, titles; old external file format fixtures | No real transcript content used; OpenCode refuses live WAL |
+| F02 | Six read-only adapters; native IDs, cwd, source/profile, times, titles; old external file format fixtures | No real transcript content used; OpenCode refuses live WAL |
 | F03 | Normalized metadata substring search, debounced UI, literal FTS token option | Query work bounded; old subprocess may finish before newer query replaces it |
-| F04 | All/four provider chips and profile filtering | Native Codex filter exercised; other actions have host-mock coverage |
+| F04 | All/six history provider chips, profile filtering, live Herdr agent catalog | Native Codex filter exercised; other actions have host-mock coverage |
 | F05 | Explicit profile, cwd trust, version/fingerprint checks, active checks, argv, wrapper revalidation, launch receipts | Native context continuation NOT verified; all same-provider processes conservatively block; Pi/Node particularly restrictive |
 | F06 | Manual refresh beyond onboarding, incremental fingerprints/cache, bounded batches, visible counts/status, cooperative cancel | Enumeration per batch bounded at 20k files/160k entries; large content requires repeated passes |
 | F07 | Personal namespace; `place=none`; installer does not edit layouts/keys; scoped uninstall and backup upgrade | Actual Herdr updater persistence/rollback not runtime-tested |
@@ -24,7 +24,7 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
 
 ## Release gates still open
 
-1. Real disposable native sessions for all four providers: original cwd + profile,
+1. Real disposable native sessions for all enabled launch providers: original cwd + profile,
    exact native ID and previous context observed after resume. Process start is
    insufficient. No real user session may be used as a probe.
 2. Provider-specific active ownership that permits safe idle-session launch while
@@ -32,13 +32,24 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
    writes but may block normal usage.
 3. Interactive coverage of every control in real Herdr, multiple panes and both
    themes/narrow widths; host mocks do not establish all native interactions.
-   The user stopped Computer Use during this pass. Complete the populated gallery
-   screenshot and visual community-theme matrix after GUI testing is resumed.
+   The renewed pass verified search/filter/preview/settings, dark/light/custom-theme
+   rendering, multiple panes and captures. Exhaustive native controls and launch remain open.
 4. Actual Herdr update and rollback on a disposable installation, not production.
 5. Independent security review of the helper, crypto envelope, dependency pipeline
    and Windows executable/launch behavior; signed build strategy if binaries ship.
-6. User approval before production installation, GitHub push or gallery publication.
+6. User approval before production installation or gallery/release publication. Source
+   commits and pushing to the requested origin were explicitly authorized.
 
 `version.json` keeps `releaseReady=false`. `build-release.ps1` refuses normal
 release mode until changed after evidence is recorded. `-AllowUnverified` builds
 only an accurately named development bundle.
+
+## Expanded agent support
+
+Claude, Codex, OpenCode, Pi, Gemini and Copilot have fixture-tested local history
+readers. Gemini requires complete bounded replay and an exact project-hash mapping
+for resume. Copilot native launch stays disabled because the installed shim has
+no real CLI. Cursor, Amp and every other native/custom Herdr catalog entry appear
+in Settings → Agents with truthful capability status; no undocumented disk reader
+or silent generic launch is used. This is catalog parity, not universal history
+or native-continuation acceptance. See PROVIDER_MATRIX.md.

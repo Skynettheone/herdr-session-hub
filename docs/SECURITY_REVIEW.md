@@ -71,3 +71,26 @@ operations and remote endpoints are not implemented. No source data was deleted
 or production mod installed. The user later explicitly authorized source commits
 and a push to their GitHub origin; no GitHub Release or gallery publication was
 performed.
+
+## Follow-up findings and remediation
+
+Review discovered a shared-source FTS privacy bug: an opted-out profile could see
+content matches from an opted-in profile sharing the same file. Content hits now
+require the current target's enabled state, opt-in, approved root and exclusions;
+metadata search remains separately available. Regression verifies both targets.
+
+Recovery previously renamed current state away before replacement was durable.
+It now atomically preserves encrypted evidence and keeps current state in place
+until replacement succeeds. A missing current file with an existing backup refuses
+silent empty initialization. Failure injection and offline recovery tests pass.
+
+Keep-local now leaves absent local annotations absent. Partial record-budget and
+oversized coverage is explicit, including old rows whose source identity changed.
+Copilot subagent events are rejected before either cwd or text is extracted.
+Gemini replay checks total projected messages, not only physical journal records;
+full-file replay prevents indexing text that later patches removed. Greater-than-
+budget/malformed Gemini sources disable launch and expose metadata-only fallback.
+
+No live credential-isolation, exact active-owner or native-context verification
+claim is added. The new source review is separate from CodeQL and is not an
+independent third-party security audit. See CODE_REVIEW.md.

@@ -1,7 +1,7 @@
 # Using Session Hub
 
 This build is a development candidate. It has passed synthetic Windows and
-native-render checks; actual context continuation in all four providers remains
+native-render checks; actual context continuation remains
 unverified. Do not use it as the only copy of important metadata.
 
 ## Setup and opening
@@ -186,3 +186,22 @@ pwsh -NoProfile -File scripts/uninstall.ps1 -AppHome "$HOME/.config/herdr-app" -
 
 The uninstaller targets only named Hub namespaces. Provider originals, auth,
 Herdr layouts and keys are untouched. Close any Hub pane through Herdr itself.
+
+## Herdr agent catalog, Gemini and Copilot
+
+Settings → Agents follows Herdr's current names, icons and installed detection,
+including custom agents. A detected command does not imply history support.
+Cursor/Amp/other agents with no verified reader show an unavailable explanation.
+
+Gemini profiles select the explicit `.gemini` config folder and a narrow `tmp`
+chat-history subtree. Detect command can select `node.exe` plus the installed
+`@google/gemini-cli/bundle/gemini.js`; shell shims are not executed. The optional
+Original project path must exactly match the recorded SHA-256 project hash. A
+missing/mismatched path leaves the project unknown and Continue disabled. Legacy
+JSON and current JSONL replay is complete only within 2 MiB and 10k messages;
+larger or malformed files stay metadata-only.
+
+Copilot profiles select the explicit Copilot home and `session-state` subtree.
+`events.jsonl` beneath UUID directories is read without starting Copilot. The
+installed VS Code shim is not a usable CLI, so Continue remains disabled. No
+auto-install or cloud API fallback runs. Rewind/truncation preview is partial.

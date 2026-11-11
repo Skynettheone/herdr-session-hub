@@ -17,16 +17,18 @@ view, CSS/DOM, external UI framework or fixed light/dark color palette.
 - Conversation, Details and Organize separate reading from technical metadata
   and metadata edits. The native continuation action stays at the bottom with
   relevant profile/version/project-trust guidance.
-- Settings separates Profiles, Search and Portability. Profile setup is guided;
+- Settings separates Profiles, Agents, Search and Portability. Profile setup is guided;
   advanced JSON is disclosed explicitly rather than being the primary workflow.
   Secondary list filters and diagnostics are disclosed on demand.
 
 `theme()` is read on every render. `semanticTheme()` resolves missing aliases
 through other Herdr tokens; it does not guess a palette from brightness. Text,
 backgrounds, hover/selection, borders, warning colors and primary button text all
-come from that active semantic theme. Icons use native tinted SVGs. Font family is
+come from that active semantic theme. Navigation icons use native tinted SVGs. Agent icons use Herdr
+`Program.tint` to choose a themed mask or original full-color image. Font family is
 inherited from Herdr. Valid community themes get the same semantic projection as
-Herdr's built-in panels; the mod never paints branded provider colors over them.
+Herdr's built-in panels; controls retain semantic colors while original full-color brand artwork is
+preserved, matching Herdr's own agent menu.
 
 Unit/host-mock checks cover dark, light and partial community token maps,
 responsive navigation and state isolation. The redesigned initial layout rendered
@@ -34,3 +36,18 @@ in the actual installed Herdr GUI. Full interactive community-theme visual revie
 was interrupted when the user stopped Computer Use and remains a release gate.
 No claim of universal contrast for malformed or intentionally low-contrast user
 palettes is made; the mod respects the colors Herdr resolves for that theme.
+
+## Renewed native visual checks — 2026-11-12
+
+The visible isolated window confirmed real provider chips/icons, debounced search,
+conversation preview, settings navigation and live catalog cards. Native testing
+found and fixed the detail column's cross-axis height and a line-height value
+interpreted as an 18× multiplier; transcript lines now use `18px`. Scroll cards
+retain their intrinsic height. Continue is disabled until profile/version/trust
+and SDK prerequisites hold.
+
+`preview.png` is now a real populated dark-theme capture. `screenshots/light.png`
+and `screenshots/community.png` are real isolated native renders, using paper and
+a custom community-format fixture derived from the installed Atom One Dark
+format. They are evidence of tested themes, not a claim that every community
+palette has accessible contrast. No user histories appear in them.

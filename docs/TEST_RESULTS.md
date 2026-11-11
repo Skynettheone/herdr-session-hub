@@ -94,3 +94,45 @@ Local package/install/uninstall verification is recorded in RELEASE_REPORT.md.
 No production installation or original deletion was performed. The folder was not
 a Git checkout at the start; the user later explicitly requested initialization,
 logical commits and a push to their origin. Release publication remains separate.
+
+## Quality/catalog follow-up (supersedes counts and interrupted-GUI notes above)
+
+- Full Python suite: **42 passed**, 20.657 seconds with ordinary desktop filesystem
+  permissions. Ten-thousand-record list/search page: 0.443 seconds while native
+  GUI checks were running; timing is a sample, not a benchmark guarantee.
+- Panel host suite: **9 test groups passed**, including delayed startup, normal
+  list and final-refresh query replacement; focused input shortcut protection;
+  native catalog/custom entries and icon tint versus full-color behavior.
+- Ruff 0.17.4 correctness checks (`F`, `E9`): passed. Tool is development-only,
+  pinned/hash-locked separately from runtime dependencies.
+- Installed native Herdr 0.1.15 check: passed after new catalog/icons and height
+  changes. The final release builder repeats it against packaged source.
+- Offline install/upgrade/uninstall smoke: passed with new assets/adapters. The
+  installed helper imports correctly under `-I`; artwork license is present;
+  layout/key/original sentinels keep their hashes.
+
+New fixtures cover Copilot root event extraction and disabled launch; subagent
+`agentId` and `parentToolCallId` exclusion from text/cwd; Gemini legacy JSON and
+JSONL patch/order/removal/replacement/rewind; cumulative 10k message budget;
+unknown cwd despite workspace directories; exact project hash mapping; oversized
+and malformed metadata-only fallback; no obsolete text after journal updates.
+Other regressions prove per-profile FTS opt-out with shared physical sources, AND
+terms across chunks, record-budget partial coverage, atomic recovery failure and
+keep-local with no previous annotation.
+
+The visible isolated app `.dev/herdr-visual` uses the same disposable core and
+synthetic histories. Native interaction verified provider filtering (four → one),
+search typing/debounce (offline → one), detail/async preview, Profiles/Agents
+settings, dark/paper/custom-community-format colors and correct provider artwork.
+Two concurrent views verified a 420px narrow pane with Back navigation, preview,
+and a separate wide pane: filtering the narrow pane left the other pane at four
+records. Native status reported `errors: []`. A first hidden launch did not expose
+a Windows automation target; the visible isolated launch resolved that.
+
+Native testing found two rendering defects that host mocks could not establish:
+missing full-height detail flex container and numeric line-height interpreted as
+a multiplier. Both were corrected and observed again with the loaded transcript.
+`preview.png` is now a populated, unmodified dark-theme frame. Light and custom
+community-format captures are under `docs/screenshots/`. No real histories or
+credential files were used. These checks do not prove every action in every theme
+or any actual native provider-context continuation.
