@@ -58,3 +58,31 @@ in REFERENCE_IMPLEMENTATIONS.md are regression motivation, not schema authority.
 
 No schema is assumed stable across future major releases. Unsupported version,
 missing native ID, stale source and uncertain active ownership disable launch.
+
+## Expanded providers and branding — 2026-11-12
+
+- Gemini source inspected at `cde401adeae75c3dd470dfbf1a6ef389f89a48f9`
+  (Apache-2.0): `packages/core/src/services/chatRecordingService.ts`,
+  `chatRecordingTypes.ts`, `config/storage.ts`, `utils/paths.ts`, and session
+  utilities. [Recording source](https://github.com/google-gemini/gemini-cli/blob/cde401adeae75c3dd470dfbf1a6ef389f89a48f9/packages/core/src/services/chatRecordingService.ts),
+  [official session docs](https://geminicli.com/docs/cli/session-management/).
+  The bounded replay is independently implemented; no upstream implementation
+  was copied or translated. Legacy JSON and append JSONL are fixture-tested;
+  `$set`, content patches, ordering, removals and rewind exclude obsolete text.
+- Copilot SDK source inspected at `233b07cbfac596121ca4a8f0ff9c02163a7c34d8`:
+  [event schema](https://github.com/github/copilot-sdk/blob/233b07cbfac596121ca4a8f0ff9c02163a7c34d8/nodejs/src/generated/session-events.ts),
+  [persistence](https://github.com/github/copilot-sdk/blob/233b07cbfac596121ca4a8f0ff9c02163a7c34d8/docs/features/session-persistence.md),
+  [official CLI reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference).
+  Only independently written field readers are shipped. `agentId` and
+  `parentToolCallId` subagent events are excluded before metadata/content.
+  Rewind/truncation is a partial raw-log excerpt, not canonical reconstruction.
+- [Cursor parameters](https://cursor.com/docs/cli/reference/parameters) and
+  [Amp threads](https://ampcode.com/docs/threads) establish native CLI behavior,
+  not verified offline history readers in this environment. No reverse-engineered
+  third-party parser or network history API was added.
+- Herdr's GUI catalog source at `b22936225403f38f0e6f38dd2f2fe4b444a85988`
+  and installed `Program`/`knownAgents` signatures establish dynamic recognition.
+  Actual icon paths and tint rules come from the installed app, not this snapshot.
+- Official sheep artwork from `herdrdev/herdr` commit
+  `ee5bfb5041bb3e4a49d591c72308aae3c81ecdde`, `assets/logo.svg`, reused
+  unmodified with Apache-2.0 license retained. See THIRD_PARTY_NOTICES.md.

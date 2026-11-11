@@ -29,3 +29,21 @@ All commands are **starting candidates**, not a substitute for probing installed
 - Codex config: https://github.com/openai/codex/blob/main/codex-rs/core/src/config/mod.rs
 - OpenCode: https://opencode.ai/docs/cli/commands
 - Pi: https://github.com/earendil-works/pi
+
+## Verified expansion — 2026-11-12
+
+| Provider | Read-only history | Native continuation status |
+|---|---|---|
+| Claude / Codex / Pi / OpenCode | Existing fixture-tested adapters | Guarded vectors tested; actual continuity unverified |
+| Gemini 0.49.0 | `tmp/<project>/chats/session-*.json` and `.jsonl`; complete replay ≤2 MiB / 10k projected messages; partial/malformed journals stay metadata-only | `--session-file <absolute-path>`; installed help verified; explicit .gemini home, Node launcher, projectPath hash match, CLI stamp and trust required; actual continuity unverified |
+| Copilot | `session-state/<UUID>/events.jsonl`; user/assistant content, root context, no subagent/tool content | Disabled: installed VS Code shim returns 127; no real CLI verified |
+| Cursor / Amp | Recognized through Herdr; no verified offline reader | No Hub continuation claim; CLIs absent |
+| Other built-in or custom Herdr agents | Dynamic catalog with native name/icon/installed state and explicit unavailable-history explanation | No guessed generic resume command |
+
+Root selection remains explicit for every profile. Gemini's config home must be
+`.gemini`; its `GEMINI_CLI_HOME` is that folder's parent. `directories` are added
+workspace paths and never treated as original cwd. `projectPath` is user supplied
+and must hash exactly to recorded `projectHash`; a mismatch leaves cwd unknown.
+Copilot rewind/truncation produces a partial raw-log excerpt; no exact canonical
+branch reconstruction is claimed. Large Gemini replay is deliberately disabled
+rather than indexing obsolete text that later patches might remove.

@@ -1,5 +1,4 @@
 """Create disposable synthetic histories and runtime; never inspect real histories."""
-import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -21,6 +20,7 @@ for name in ("main.js", "model.js", "ui.js", "mod.json"):
     shutil.copyfile(repo / "mods/session-hub" / name, mod / name)
 shutil.copytree(repo / "mods/session-hub/helper", mod / "helper", dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
 shutil.copytree(repo / "mods/session-hub/icons", mod / "icons", dirs_exist_ok=True)
+shutil.copytree(repo / "mods/session-hub/assets", mod / "assets", dirs_exist_ok=True)
 state = app / "data/session-hub"
 profiles = []
 titles = {"claude": "Polish the command palette", "codex": "Add offline search", "pi": "Review the release checklist"}

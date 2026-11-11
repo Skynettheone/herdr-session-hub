@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-import subprocess
 import sys
 import tempfile
 import time
@@ -70,6 +69,95 @@ class HubTests(unittest.TestCase):
         self.save(store, profile)
         hub.refresh(store, content)
         return store.get("records")[0]
+
+    def additional_provider(self, provider, content=True):
+        config = self.base / (".gemini" if provider == "gemini" else "copilot")
+        root = config / ("tmp/project/chats" if provider == "gemini" else "session-state/" + ID)
+        root.mkdir(parents=True)
+        profile = {"id": provider, "provider": provider, "roots": [str(root)], "configHome": str(config),
+                   "executable": "", "content": content}
+        return profile, root / ("session-example.jsonl" if provider == "gemini" else "events.jsonl")
+
+    def test_copilot_offline_events_and_unavailable_resume(self):
+        profile, path = self.additional_provider("copilot")
+        path.write_bytes(encode([
+            {"type": "session.start", "data": {"sessionId": ID, "version": 1, "context": {"cwd": str(self.cwd)}}},
+            {"id": "u", "type": "user.message", "timestamp": "2026-11-01T10:00:00Z", "data": {"content": "Copilot synthetic title"}},
+            {"type": "tool.execution_complete", "data": {"content": "do not index tool"}},
+            {"type": "assistant.message", "data": {"content": "do not index subagent", "parentToolCallId": "t"}},
+            {"type": "assistant.message", "agentId": "subagent", "data": {"content": "do not index agent id"}},
+            {"type": "session.context_changed", "agentId": "subagent", "data": {"cwd": "C:/incorrect"}},
+            {"type": "assistant.message", "data": {"content": "zephyr visible response"}}
+        ]))
+        original = path.read_bytes()
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile, True)
+            self.assertEqual(row["nativeId"], ID)
+            self.assertEqual(row["cwd"], str(self.cwd))
+            self.assertEqual(hub.list_records(store, {"query": "zephyr", "fullText": True})["total"], 1)
+            preview = hub.preview(store, row["key"])
+            self.assertEqual(len(preview["messages"]), 2)
+            self.assertIn("not been verified", store.get("profiles")[0]["resumeDisabled"])
+            with self.assertRaises(hub.HubError):
+                hub.resume_spec(store, row["key"], profile["id"], lambda _: False)
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_gemini_journal_replay_patches_rewind_and_project_mapping(self):
+        profile, path = self.additional_provider("gemini")
+        profile["projectPath"] = str(self.cwd)
+        rows = [{"sessionId": ID, "projectHash": hashlib.sha256(str(self.cwd).encode()).hexdigest(), "kind": "main"},
+                {"id": "u", "type": "user", "timestamp": "2026-11-01T10:00:00Z", "content": "Gemini synthetic title"},
+                {"id": "a", "type": "gemini", "content": [{"text": "old zephyr response"}, {"functionCall": {"args": "do not index"}}]},
+                {"$patch": {"id": "a", "content": [{"text": "new visible response"}]}},
+                {"id": "removed", "type": "user", "content": "removed text"}, {"$rewindTo": "removed"}]
+        path.write_bytes(encode(rows))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile, True)
+            self.assertEqual(row["cwd"], str(self.cwd))
+            self.assertTrue(row["formatSupported"])
+            self.assertEqual([m["text"] for m in hub.preview(store, row["key"])["messages"]], ["Gemini synthetic title", "new visible response"])
+            self.assertEqual(hub.list_records(store, {"query": "zephyr", "fullText": True})["total"], 0)
+            self.assertEqual(hub.list_records(store, {"query": "new visible", "fullText": True})["total"], 1)
+            # Append operations can remove text: replace the indexed projection.
+            path.write_bytes(encode(rows + [{"$patch": {"removeIds": ["a"]}}]))
+            hub.refresh(store, True)
+            self.assertEqual(hub.list_records(store, {"query": "new visible", "fullText": True})["total"], 0)
+            hub.refresh(store)  # unchanged-file refresh must remain safe
+
+    def test_gemini_legacy_json_unknown_cwd_and_oversized_fallback(self):
+        profile, path = self.additional_provider("gemini")
+        path = path.with_suffix(".json")
+        record = {"sessionId": ID, "projectHash": "unknown", "directories": [str(self.cwd)],
+                  "messages": [{"id": "u", "type": "user", "content": "legacy Gemini"}, {"id": "a", "type": "gemini", "content": "unique deleted response"}]}
+        path.write_text(json.dumps(record))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile, True)
+            self.assertEqual(row["cwd"], "")
+            self.assertEqual(hub.preview(store, row["key"])["messages"][0]["text"], "legacy Gemini")
+            path.write_text(json.dumps({**record, "padding": "x" * (hub.CHUNK + 1)}))
+            hub.refresh(store, True)
+            row = next(r for r in store.get("records") if not r["stale"])
+            self.assertFalse(row["formatSupported"])
+            self.assertIn("metadata only", row["contentWarning"])
+            self.assertTrue(hub.preview(store, row["key"])["partial"])
+            self.assertEqual(hub.list_records(store, {"query": "unique deleted", "fullText": True})["total"], 0)
+            self.assertTrue(next(r for r in store.get("records") if r["nativeId"] == ID)["stale"])
+
+    def test_gemini_reordered_replaced_and_malformed_journals(self):
+        replay = hub._adapters.gemini.replay
+        rows = replay([{"sessionId": ID, "projectHash": "h"}, {"id": "a", "type": "user", "content": "a"},
+                       {"id": "b", "type": "gemini", "content": "b"}, {"$patch": {"orderIds": ["a", "a"]}}])
+        self.assertEqual([r.get("id") for r in rows[1:]], ["b", "a"])
+        rows = replay([{"sessionId": ID}, {"id": "a"}, {"$set": {"messages": [{"id": "b", "type": "user"}]}}])
+        self.assertEqual([r.get("id") for r in rows[1:]], ["b"])
+        with self.assertRaises(ValueError):
+            replay([{"$set": {"messages": [{"id": str(n)} for n in range(10000)]}}, {"id": "overflow"}])
+        profile, path = self.additional_provider("gemini")
+        path.write_bytes(encode([{"sessionId": ID, "projectHash": "h"}, {"$patch": {"updates": 42}}]))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            self.assertFalse(row["formatSupported"])
+            self.assertGreater(row["malformed"], 0)
 
     def test_dpapi_atomic_backup_and_no_plaintext(self):
         with hub.Store(self.state) as store:
@@ -255,7 +343,8 @@ class HubTests(unittest.TestCase):
             self.scan(store, p, True)
             for _ in range(6):
                 hub.refresh(store, True)
-            self.assertTrue(store.get("records")[0]["indexComplete"])
+            self.assertTrue(store.get("file:" + store.get("records")[0]["canonicalSourceIdentity"])["complete"])
+            self.assertFalse(store.get("records")[0]["indexComplete"], "oversized omitted records are not complete coverage")
             self.assertEqual(hub.list_records(store, {"query": "afterhugeentry", "fullText": True})["total"], 1)
 
     def test_native_version_fingerprint_blocks_update(self):

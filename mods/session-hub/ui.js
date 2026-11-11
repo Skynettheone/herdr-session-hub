@@ -1,11 +1,18 @@
-import { div, svg } from "gpui-kit";
+import { div, svg, image } from "gpui-kit";
 import { h_flex, v_flex, Button, Input } from "gpui-base";
-import { semanticTheme, safeText, groupRows, providers, providerName, projectName, shortTime, canPage } from "./model.js";
+import { semanticTheme, safeText, groupRows, providers, providerName, projectName, shortTime, canPage, historyCapability } from "./model.js";
 
 export function renderPanel(v, cx, rawTheme) {
   const t = semanticTheme(rawTheme), wide = (v.width || 380) >= 760;
   const text = (value, color = t.foreground, size = 12) => div().min_w(0).text_size(size).text_color(color).child(safeText(value, 4000));
   const icon = (name, color = t.muted, size = 14) => svg("mods/session-hub/icons/" + name + ".svg").w(size).h(size).flex_none().text_color(color);
+  const agentIcon = (key, size = 14) => {
+    const agent = v.agents.find(p => p.key === key);
+    if (!agent?.icon) return icon("history", t.muted, size);
+    // Herdr's Program.tint is authoritative: masks follow the active theme;
+    // full-color provider artwork keeps its original colors, like Herdr's menu.
+    return (agent.tint ? svg(agent.icon).text_color(t.foreground) : image(agent.icon)).w(size).h(size).flex_none();
+  };
   const badge = (label, color = t.muted) => text(label, color, 10).px(5).py(2).rounded(4).bg(t.raised);
   const button = (id, label, action, options = {}) => {
     const disabled = !!options.disabled || (v.busy && id !== "cancel-scan");
@@ -18,6 +25,7 @@ export function renderPanel(v, cx, rawTheme) {
       .when(disabled, e => e.cursor_not_allowed()).when(!disabled, e => e.cursor_pointer().hover(s => s.bg(options.primary ? t.solid : t.hover)))
       .on_click((_event, cx) => { if (!disabled) action(cx); });
     if (options.icon) el.child(icon(options.icon, options.primary ? t.solid_foreground : options.selected ? t.accent : t.muted));
+    if (options.agent) el.child(agentIcon(options.agent));
     if (!options.iconOnly) el.child(label);
     return el;
   };
@@ -25,7 +33,7 @@ export function renderPanel(v, cx, rawTheme) {
     .flex().items_center().rounded(7).bg(t.surface).border_1().border_color(state === v.search && v.searchFocused ? t.accent : t.input)
     .child(Input.new(state).w_full().text_size(12).text_color(t.foreground));
   const label = value => text(value, t.muted, 11).font_medium();
-  const section = (title, description) => v_flex().gap(10).p(14).rounded(9).bg(t.surface).border_1().border_color(t.border)
+  const section = (title, description) => v_flex().flex_none().gap(10).p(14).rounded(9).bg(t.surface).border_1().border_color(t.border)
     .child(text(title, t.foreground, 13).font_semibold()).when(!!description, e => e.child(text(description, t.muted, 11.5)));
   const empty = (title, description, action) => v_flex().items_center().justify_center().gap(10).p(24).flex_1().min_h(150)
     .child(div().p(12).rounded(12).bg(t.surface).child(icon("history", t.muted, 24)))
@@ -37,7 +45,7 @@ export function renderPanel(v, cx, rawTheme) {
     .size_full().min_w(0).min_h(0).rounded(10).overflow_hidden().bg(t.chrome).border_1().border_color(t.border).text_color(t.foreground).text_size(12);
   const back = v.settings || (v.detail && !wide);
   root.child(h_flex().h(46).flex_none().px(12).gap(8).items_center().border_b_1().border_color(t.border)
-    .child(back ? button("back", "Back to history", cx => { v.settings = false; v.detail = null; cx.notify(); }, {icon:"back",iconOnly:true}) : icon("history",t.muted,17))
+    .child(back ? button("back", "Back to history", cx => { v.settings = false; v.detail = null; cx.notify(); }, {icon:"back",iconOnly:true}) : image("mods/session-hub/assets/herdr-logo.svg").w(23).h(23).rounded(5).flex_none())
     .child(text(v.settings ? "History settings" : "History",t.foreground,14).font_semibold())
     .when(!v.settings, e => e.child(badge(String(v.data.total))))
     .child(div().flex_1())
@@ -60,7 +68,7 @@ export function renderPanel(v, cx, rawTheme) {
         .when(!!v.query, e=>e.child(button("clear-search","Clear search",cx=>{v.search.set_value("");v.query="";v.offset=0;v.load(cx);},{icon:"close",iconOnly:true}))))
       .child(h_flex().gap(3).flex_wrap().children(providers.map(p=>button("provider-"+p,p==="all"?"All":p==="claude"?"Claude":providerName(p),cx=>{
         v.provider=p;v.offset=0;v.load(cx);
-      },{selected:v.provider===p,height:25})))));
+      },{selected:v.provider===p,height:25,agent:p==="all"?null:p})))));
     pane.child(h_flex().px(12).pb(8).gap(3).items_center()
       .child(button("profile-picker",v.data.profiles.find(p=>p.id===v.profile)?.label||"All profiles",cx=>{v.profileMenuOpen=!v.profileMenuOpen;cx.notify();},{icon:"profiles",selected:!!v.profile}))
       .child(div().flex_1())
@@ -85,17 +93,17 @@ export function renderPanel(v, cx, rawTheme) {
         else{v.provider="all";v.profile="";v.query="";v.search.set_value("");v.archived=false;v.removed=false;v.load(cx);}cx.notify();
       },{primary:true})));
     for(const group of groupRows(v.data.rows,v.collapsed)) {
-      body.child(Button.new("group-"+group.path).accessibility_label("Project "+group.path).h(30).w_full().px(7).flex().gap(7).items_center()
+      body.child(Button.new("group-"+group.path).accessibility_label("Project "+group.path).h(30).w_full().flex_none().px(7).flex().gap(7).items_center()
         .text_color(t.muted).cursor_pointer().on_click((_e,cx)=>{v.collapsed[group.path]=!v.collapsed[group.path];cx.notify();})
         .child(icon(group.collapsed?"chevron-right":"chevron-down",t.muted,10)).child(icon("folder",t.muted,13))
         .child(text(projectName(group.path),t.muted,11).font_medium().flex_1().truncate()).child(text(String(group.rows.length),t.dim,10)));
       if(!group.collapsed) for(const row of group.rows) {
         const selected = v.detail?.key===row.key || v.data.rows[v.selected]?.key===row.key;
         body.child(Button.new("session-"+row.key).accessibility_label(row.title+"; "+providerName(row.provider)+"; "+profilesFor(row))
-          .w_full().h(67).px(9).flex().gap(9).items_center().rounded(8).bg(selected?t.selected:t.chrome).cursor_pointer()
+          .w_full().h(67).flex_none().px(9).flex().gap(9).items_center().rounded(8).bg(selected?t.selected:t.chrome).cursor_pointer()
           .hover(s=>s.bg(t.hover)).on_click((_e,cx)=>v.choose(row,cx))
           .child(div().w(28).h(28).flex_none().flex().items_center().justify_center().rounded(7).bg(t.surface)
-            .text_size(9.5).font_semibold().text_color(selected?t.accent:t.muted).child(({claude:"CL",codex:"CX",opencode:"OC",pi:"PI"})[row.provider]))
+            .child(agentIcon(row.provider,18)))
           .child(v_flex().flex_1().min_w(0).gap(6)
             .child(text(row.title,t.foreground,12.5).font_medium().truncate())
             .child(h_flex().gap(5).items_center().child(text(providerName(row.provider),t.muted,10.5))
@@ -113,15 +121,15 @@ export function renderPanel(v, cx, rawTheme) {
   }
 
   function detailPane(row) {
-    if(!row) return empty("Pick a conversation","Read its history, choose a profile, and continue in a new Herdr tab.");
+    if(!row) return empty("Pick a conversation","Read its history, choose a profile, and continue in a new Herdr tab.").h_full();
     const profile=v.data.profiles.find(p=>p.id===v.target), trusted=profile?.trustedProjects?.includes(row.cwd);
-    const pane=v_flex().flex_1().min_w(0).min_h(0).bg(t.surface);
+    const pane=v_flex().flex_1().h_full().min_w(0).min_h(0).bg(t.surface);
     pane.child(v_flex().px(16).pt(15).pb(11).gap(9).flex_none()
       .child(text(row.title,t.foreground,15).font_semibold())
       .child(h_flex().gap(6).items_center().child(icon("folder",t.muted,13))
         .child(text(projectName(row.cwd),t.muted,11.5).truncate().flex_1())
         .child(button("copy-cwd","Copy project path",cx=>{cx.write_to_clipboard(row.cwd||"");v.notice="Project path copied";cx.notify();},{icon:"copy",iconOnly:true})))
-      .child(h_flex().gap(5).flex_wrap().child(badge(providerName(row.provider)))
+      .child(h_flex().gap(5).flex_wrap().child(agentIcon(row.provider)).child(badge(providerName(row.provider)))
         .children(row.targets.map(id=>button("target-"+id,v.data.profiles.find(p=>p.id===id)?.label||id,cx=>{v.target=id;cx.notify();},{selected:v.target===id,height:24})))));
     pane.child(h_flex().px(12).gap(3).border_b_1().border_color(t.border)
       .child(button("conversation-tab","Conversation",cx=>{v.detailSection="conversation";cx.notify();},{selected:!v.detailSection||v.detailSection==="conversation"}))
@@ -131,7 +139,7 @@ export function renderPanel(v, cx, rawTheme) {
     if(v.detailSection==="details") {
       for(const [name,value] of [["Session ID",row.nativeId],["Project path",row.cwd||"Unknown"],["Source",row.sourcePath],["Last conversation",row.lastConversationAt||"Unknown"],
         ["Timestamp coverage",row.timestampCoverage],["File changed",row.fileModifiedAt||"Unknown"],["Content indexed",`${row.indexBytes||0} bytes · ${row.indexComplete?"complete":"partial / not indexed"}`],
-        ["Resume outcome",row.receipt?.state||"Not requested"]]) scroll.child(v_flex().gap(4).child(label(name)).child(text(value,t.foreground,11.5)));
+        ["Resume outcome",row.receipt?.state||"Not requested"],["Content limits",row.contentWarning||"See timestamp and index coverage"]]) scroll.child(v_flex().gap(4).child(label(name)).child(text(value,t.foreground,11.5)));
       scroll.child(button("copy-id","Copy session ID",cx=>{cx.write_to_clipboard(row.nativeId);v.notice="Session ID copied";cx.notify();},{icon:"copy",outline:true}));
     } else if(v.detailSection==="organize") {
       scroll.child(section("Display name","Only changes the name shown in Session Hub.").child(input(v.alias,"alias-input"))
@@ -153,10 +161,10 @@ export function renderPanel(v, cx, rawTheme) {
       if(v.previewLoading) scroll.child(text("Loading conversation…",t.muted));
       else if(v.previewError) scroll.child(text(v.previewError,t.blocked,11.5));
       else if(!v.preview?.messages?.length) scroll.child(empty("No preview available","Metadata is still available in Details."));
-      for(const [i,m] of (v.preview?.messages||[]).entries()) scroll.child(v_flex().id("turn-"+i).p(12).gap(8).rounded(8).bg(m.role==="user"?t.raised:t.surface)
+      for(const [i,m] of (v.preview?.messages||[]).entries()) scroll.child(v_flex().id("turn-"+i).flex_none().p(12).gap(8).rounded(8).bg(m.role==="user"?t.raised:t.surface)
         .when(m.role!=="user",e=>e.border_1().border_color(t.border))
         .child(text(m.role==="user"?"You":"Assistant",m.role==="user"?t.accent:t.muted,10.5).font_medium())
-        .child(text(m.text,t.foreground,12).line_height(18)));
+        .child(text(m.text,t.foreground,12).line_height("18px")));
       if(v.preview?.partial) scroll.child(text("This bounded excerpt is not the complete provider context.",t.muted,11));
     }
     pane.child(scroll);
@@ -169,7 +177,8 @@ export function renderPanel(v, cx, rawTheme) {
     else if(!trusted) resumeArea.child(v_flex().gap(6).child(text("Trust this project before its provider loads hooks and configuration.",t.muted,11))
       .child(input(v.projectConfirm,"project-trust-input"))
       .child(button("trust-project","Trust exact project path",cx=>v.perform(cx,{action:"trust-project",key:row.key,profile:v.target,confirmation:v.projectConfirm.value()}),{outline:true})));
-    resumeArea.child(button("resume","Continue in Herdr",cx=>v.resume(cx),{primary:true,icon:"forward",height:34,disabled:!v.target||row.stale}))
+    if(profile?.resumeDisabled) resumeArea.child(text(profile.resumeDisabled,t.blocked,11));
+    resumeArea.child(button("resume","Continue in Herdr",cx=>v.resume(cx),{primary:true,icon:"forward",height:34,disabled:!v.target||row.stale||!!profile?.resumeDisabled||!row.formatSupported||!row.cwd||!profile?.versionVerified||!trusted||!v.launchCompatible}))
       .child(text("Opens a native agent tab. Context remains unverified until checked.",t.muted,10));
     pane.child(resumeArea);
     return pane;
@@ -177,7 +186,7 @@ export function renderPanel(v, cx, rawTheme) {
 
   function settingsPane() {
     const tabs=h_flex().px(12).py(9).gap(4).border_b_1().border_color(t.border);
-    for(const [id,name] of [["profiles","Profiles"],["search","Search"],["portability","Portability"]]) tabs.child(button("settings-"+id,name,cx=>{v.settingsSection=id;cx.notify();},{selected:(v.settingsSection||"profiles")===id}));
+    for(const [id,name] of [["profiles","Profiles"],["agents","Agents"],["search","Search"],["portability","Portability"]]) tabs.child(button("settings-"+id,name,cx=>{v.settingsSection=id;cx.notify();},{selected:(v.settingsSection||"profiles")===id}));
     const body=v_flex().id("settings-body").flex_1().min_h(0).overflow_y_scrollbar().p(14).gap(12);
     const page=v.settingsSection||"profiles";
     if(page==="profiles") {
@@ -190,7 +199,7 @@ export function renderPanel(v, cx, rawTheme) {
           .child(button("verify-"+p.id,"Check version",cx=>v.perform(cx,{action:"verify-version",profile:p.id},r=>{v.notice=r.verified?"Provider command verified":"Command version is unsupported";}),{outline:true}))));
       if(v.formOpen||!v.data.profiles.length) {
         const form=section(v.profileDraft.id?"Edit profile":"Connect a profile","Use a separate profile for each account. Credentials stay with the provider.");
-        form.child(h_flex().gap(3).flex_wrap().children(providers.filter(p=>p!=="all").map(p=>button("form-provider-"+p,providerName(p),cx=>{v.formProvider=p;v.profileDraft={};cx.notify();},{selected:v.formProvider===p}))));
+        form.child(h_flex().gap(3).flex_wrap().children(providers.filter(p=>p!=="all").map(p=>button("form-provider-"+p,providerName(p),cx=>{v.formProvider=p;v.profileDraft={};cx.notify();},{selected:v.formProvider===p,agent:p}))));
         form.child(label("Profile ID")).child(input(v.formFields.id,"profile-id-input")).child(label("Display label")).child(input(v.formFields.label,"profile-label-input"));
         for(const [field,heading,buttonId] of [["root","Session directory","pick-root"],["configHome","Account / config directory","pick-config"]]) form.child(label(heading))
           .child(h_flex().gap(6).child(input(v.formFields[field],field+"-input").flex_1())
@@ -200,7 +209,9 @@ export function renderPanel(v, cx, rawTheme) {
             const found=r.providers[v.formProvider];v.formFields.executable.set_value(found.executable||"");v.formFields.launchScript.set_value(found.launchScript||"");
             v.notice=found.installed?"Command found. Select the account folders explicitly.":found.state;
           }),{icon:"search",outline:true}));
-        if(v.formProvider==="pi") form.child(label("Pi launcher script")).child(input(v.formFields.launchScript,"pi-script-input"));
+        if(["pi","gemini"].includes(v.formProvider)) form.child(label("Provider Node launcher script")).child(input(v.formFields.launchScript,"pi-script-input"));
+        if(v.formProvider==="gemini") form.child(label("Original project path (optional)")).child(input(v.formFields.projectPath,"gemini-project-input"))
+          .child(text("Gemini records a project hash. Resume stays unavailable unless this exact path matches it. Extra workspace directories are not used as the original project.",t.muted,11));
         form.child(button("content-opt-in",v.profileDraft.content?"Conversation search enabled":"Metadata search only",cx=>{v.profileDraft.content=!v.profileDraft.content;cx.notify();},{selected:!!v.profileDraft.content,outline:true}))
           .child(text("Conversation search is optional. Indexed text stays encrypted on this computer.",t.muted,11))
           .child(button("save-profile-form","Save profile",cx=>v.saveProfile(cx),{primary:true}))
@@ -211,6 +222,14 @@ export function renderPanel(v, cx, rawTheme) {
           },{outline:true}));
         body.child(form);
       }
+    } else if(page==="agents") {
+      body.child(text("Agents from Herdr",t.foreground,14).font_semibold())
+        .child(text("This catalog follows your installed Herdr, including custom agents. History support depends on a verified local format, separately from whether Herdr can start an agent.",t.muted,11.5));
+      if(v.catalogError) body.child(text(v.catalogError,t.blocked,11));
+      for(const agent of v.agents) body.child(section(agent.name)
+        .child(h_flex().gap(8).items_center().child(agentIcon(agent.key,20)).child(badge(agent.installed?"Command detected":"Command not detected")))
+        .child(text(historyCapability(agent),agent.history?t.muted:t.blocked,11.5))
+        .when(agent.history,e=>e.child(button("connect-"+agent.key,"Connect profile",cx=>{v.formProvider=agent.key;v.settingsSection="profiles";v.profileDraft={};v.formOpen=true;for(const f of Object.values(v.formFields))f.set_value("");cx.notify();},{outline:true}))));
     } else if(page==="search") {
       body.child(section("Conversation search","Choose the profiles whose conversation text you want searchable. Metadata search works without opting in.")
         .children(v.data.profiles.map(p=>h_flex().gap(8).items_center().child(text(p.label,t.foreground).flex_1())

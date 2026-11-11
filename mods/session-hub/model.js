@@ -1,5 +1,17 @@
 // Pure panel state helpers; native host calls stay in the View instance.
-export const providers = ["all", "claude", "codex", "opencode", "pi"];
+export const providers = ["all", "claude", "codex", "opencode", "pi", "copilot", "gemini"];
+export function agentCatalog(native = []) {
+  const catalog = new Map(native.filter(p => p?.key && Array.isArray(p.run)).map(p => [p.key, { ...p,
+    history: providers.includes(p.key), name: safeText(p.name || providerName(p.key), 60) }]));
+  for (const key of providers.slice(1)) if (!catalog.has(key)) catalog.set(key, {key, name:providerName(key), installed:false, history:true});
+  return [...catalog.values()];
+}
+export function historyCapability(agent) {
+  if (!agent.history) return "History unavailable: no verified offline adapter. Herdr can still start this agent.";
+  if (agent.key === "copilot") return "Local history supported. Native continuation is disabled until a real CLI is verified.";
+  if (agent.key === "gemini") return "Local history supported within the replay budget. Original project requires an explicit matching path.";
+  return "Local history supported. Native continuation requires a verified profile and trusted project.";
+}
 export function safeText(value, limit = 300) {
   return String(value ?? "").replace(/[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "").slice(0, limit);
 }
@@ -30,7 +42,7 @@ export function semanticTheme(raw) {
     solid: raw.solid || raw.accent, solid_foreground: raw.solid_foreground || raw.accent_foreground || raw.background,
     blocked: raw.blocked || raw.ansi3 || raw.foreground, idle: raw.idle || raw.muted || raw.foreground };
 }
-export const providerName = p => ({claude:"Claude Code",codex:"Codex",opencode:"OpenCode",pi:"Pi"}[p] || p);
+export const providerName = p => ({claude:"Claude Code",codex:"Codex",opencode:"OpenCode",pi:"Pi",copilot:"Copilot",gemini:"Gemini",cursor:"Cursor",amp:"Amp"}[p] || p);
 export const projectName = path => path ? path.split(/[\\/]/).filter(Boolean).at(-1) || path : "Unknown project";
 export function shortTime(value, now = Date.now()) {
   if (!value) return "Time unknown";

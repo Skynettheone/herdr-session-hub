@@ -1,7 +1,7 @@
 import { View } from "gpui-kit";
 import { InputState } from "gpui-base";
-import { appHome, readTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder } from "herdr";
-import { safeText, requestFor, launchArgs } from "./model.js";
+import { appHome, readTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents } from "herdr";
+import { safeText, requestFor, launchArgs, agentCatalog } from "./model.js";
 import { renderPanel } from "./ui.js";
 
 export default class SessionHub extends View {
@@ -12,6 +12,7 @@ export default class SessionHub extends View {
     this.collapsed = {}; this.busy = false; this.error = ""; this.notice = "";
     this.detail = null; this.preview = null; this.settings = false; this.runtime = null;
     this.portable = null;
+    this.agents = agentCatalog(); this.catalogError = "";
     this.loading = true; this.width = 380; this.settingsSection = "profiles"; this.detailSection = "conversation";
     this.generation = 0; this.handle = cx.focus_handle();
     this.previewGeneration = 0; this.reloadPending = false;
@@ -24,7 +25,7 @@ export default class SessionHub extends View {
     this.formFields = {};
     for (const [name, placeholder] of Object.entries({ id: "personal-claude", label: "Personal Claude",
       root: "Absolute session directory", configHome: "Provider config home (account directory)",
-      executable: "Absolute CLI .exe", launchScript: "Pi launcher script (optional)" })) {
+      executable: "Absolute CLI .exe", launchScript: "Provider Node launcher (optional)", projectPath: "Gemini original project path (optional)" })) {
       this.formFields[name] = InputState.new({ placeholder });
     }
     for (const input of [this.search, this.alias, this.projectConfirm, this.profileEditor, this.bundlePath, ...Object.values(this.formFields)]) {
@@ -49,10 +50,16 @@ export default class SessionHub extends View {
         const version = await exec(runtime.herdr || "herdr-app", ["--version"], { timeout: 8000 });
         this.launchCompatible = version.code === 0 && version.stdout.trim() === "herdr-app 0.1.15";
         if (!this.launchCompatible) this.notice = "Herdr version is outside the tested SDK. History browsing is available; resume is disabled pending compatibility review.";
-        const result = await this.rpc({ action: "list" });
-        this.data = result;
+        const snapshot = requestFor(this);
+        this.publishList(await this.rpc(snapshot), snapshot);
+        if (this.reloadPending && !this.busy) this.load(cx);
       } catch (error) { this.error = safeText(error.message); }
       this.loading = false; cx.notify();
+    });
+    cx.spawn(async cx => {
+      try { this.agents = agentCatalog(await knownAgents()); }
+      catch (_) { this.catalogError = "Herdr's agent catalog is unavailable. History profiles still work; native icons will return when the catalog is available."; }
+      cx.notify();
     });
     cx.spawn(async (cx) => {
       for (;;) {
@@ -158,6 +165,7 @@ export default class SessionHub extends View {
     const p = { ...this.profileDraft, provider: this.formProvider, id: value("id"), label: value("label"),
       roots: [value("root"), ...(this.profileDraft.roots || []).slice(1)], configHome: value("configHome"), executable: value("executable"),
       launchScript: value("launchScript") || undefined, content: !!this.profileDraft.content, enabled: this.profileDraft.enabled !== false };
+    p.projectPath = this.formProvider === "gemini" ? value("projectPath") : undefined;
     // Directory mappings are derived by the helper, never silently inherited from an edited provider.
     delete p.env;
     this.perform(cx, { action: "profile-save", profile: p }, () => { this.notice = "Profile saved. Check its CLI version, then refresh."; });

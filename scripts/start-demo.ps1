@@ -1,4 +1,5 @@
 # Starts only an isolated app home and isolated core. No production mods/layouts.
+param([switch]$Visible)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dev = Join-Path $repo '.dev'
@@ -14,5 +15,6 @@ $env:DO_NOT_TRACK = '1'
 if ($LASTEXITCODE -ne 0) { throw 'Demo preparation failed' }
 hc server start
 if ($LASTEXITCODE -ne 0) { throw 'Isolated core failed to start' }
-Start-Process -FilePath (Get-Command herdr-app).Source -WindowStyle Hidden
+if($Visible){Start-Process -FilePath (Get-Command herdr-app).Source -WindowStyle Normal}
+else{Start-Process -FilePath (Get-Command herdr-app).Source -WindowStyle Hidden}
 Write-Output 'Started isolated Herdr demo (HC_SESSION=test-session-hub). Use this same environment for status/shot/commands.'

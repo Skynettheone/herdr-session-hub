@@ -51,3 +51,29 @@ installation, app upgrade and gallery publication require separate approval.
 
 Pinned sources and licensing observations are in UPSTREAM_REVIEW.md. Test results
 and release gates will be recorded separately; these findings are not test passes.
+
+## Expanded catalog and branding — 2026-11-12
+
+The installed 0.1.15 SDK exposes `knownAgents()` plus Program key/name/icon/tint
+and installed state. Hub follows this live catalog, including community/custom
+entries, without guessing a launch command. Herdr's current upstream catalog
+has more entries than the eight in the supplied screenshot. Recognition does
+not establish local-history compatibility.
+
+Gemini 0.49.0 was probed through the installed native Node launcher using an
+isolated `GEMINI_CLI_HOME`. Public Google source documents legacy JSON and
+current JSONL (`$set`, `$patch`, `$rewindTo`). Complete projection is limited
+to 2 MiB/10,000 messages; incomplete journals remain metadata-only. A project
+hash is not cwd. Resume requires an explicit exact path whose SHA-256 matches
+the recorded project hash; added workspace directories are not used as cwd.
+
+Copilot SDK documents persisted events and `COPILOT_HOME/session-state`. The
+installed VS Code copilot.exe shim returns 127 and says the real CLI is missing.
+Discovery is implemented, including subagent exclusion; native launch stays
+disabled. No CLI was installed. Cursor and Amp are absent; their current official
+CLI docs establish resume commands but do not establish a verified offline disk
+reader here. Other Herdr/custom agents show specific unavailable-history status.
+
+The official sheep SVG comes from the user-requested Herdr TUI repository only
+as artwork. The extension continues to use the native desktop GUI SDK. License
+and pinned source are retained in THIRD_PARTY_NOTICES.md.

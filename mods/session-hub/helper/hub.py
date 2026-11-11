@@ -6,12 +6,11 @@ Python 3.14 is required for the standard-library zstd reader.
 from __future__ import annotations
 
 import argparse
-import base64
-import contextlib
 import ctypes
 from ctypes import wintypes
 import datetime as dt
 import getpass
+import importlib.util
 import hashlib
 import io
 import json
@@ -23,25 +22,36 @@ import sqlite3
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import unicodedata
 import uuid
 from compression import zstd
 
 SCHEMA = 2
-PARSER = 1
+PARSER = 2
 CHUNK = 2 * 1024 * 1024
 LINE = 1024 * 1024
 MAX_STATE = 256 * 1024 * 1024
 MAX_FILES = 20000
 UUID = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", re.I)
 KEY = re.compile(r"[0-9a-f]{64}")
-PROVIDERS = ("claude", "codex", "opencode", "pi")
+PROVIDERS = ("claude", "codex", "opencode", "pi", "copilot", "gemini")
 SECRET_NAMES = {"auth.json", "credentials.json", "config.json", "settings.json", "config.toml", "tokens.json", ".env"}
 ENV_NAMES = {"claude": {"CLAUDE_CONFIG_DIR"}, "codex": {"CODEX_HOME"},
              "pi": {"PI_CODING_AGENT_DIR", "PI_CODING_AGENT_SESSION_DIR"},
-             "opencode": {"XDG_DATA_HOME", "XDG_CONFIG_HOME"}}
+             "opencode": {"XDG_DATA_HOME", "XDG_CONFIG_HOME"},
+             "copilot": {"COPILOT_HOME"}, "gemini": {"GEMINI_CLI_HOME"}}
+
+
+# Isolated Python (-I) deliberately excludes the script directory from sys.path.
+# Load only this shipped package by its fixed absolute path, without exposing
+# user roots, cwd or provider installation directories to Python imports.
+_adapter_spec = importlib.util.spec_from_file_location("session_hub_adapters", Path(__file__).parent / "adapters/__init__.py")
+_adapters = importlib.util.module_from_spec(_adapter_spec)
+sys.modules[_adapter_spec.name] = _adapters
+_adapter_spec.loader.exec_module(_adapters)
+clean, redact, timestamp, text_blocks = _adapters.clean, _adapters.redact, _adapters.timestamp, _adapters.text_blocks
+parse_record = _adapters.parse_record
 
 
 class HubError(Exception):
@@ -51,27 +61,6 @@ class HubError(Exception):
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=True).encode()).hexdigest()
 
-
-def clean(value, limit=300):
-    if not isinstance(value, str):
-        return ""
-    return "".join(c for c in value if c in "\n\t" or unicodedata.category(c) not in {"Cc", "Cf", "Cs"})[:limit]
-
-
-def redact(value):
-    value = re.sub(r"(?i)(bearer\s+|(?:api[_-]?key|password|token|secret)\s*[:=]\s*)[^\s,;]+", r"\1[redacted]", value)
-    return re.sub(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{16,})\b", "[redacted]", value)
-
-
-def timestamp(value):
-    try:
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            return dt.datetime.fromtimestamp(value / 1000, dt.timezone.utc).isoformat()
-        if isinstance(value, str):
-            return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.timezone.utc).isoformat()
-    except (ValueError, OSError, OverflowError):
-        pass
-    return None
 
 
 def is_link(path):
@@ -245,77 +234,6 @@ class Store:
                 self.lock.close()
 
 
-def text_blocks(content):
-    if isinstance(content, str):
-        return clean(content, LINE)
-    if isinstance(content, list):
-        return "\n".join(clean(x.get("text"), LINE) for x in content[:1000]
-                         if isinstance(x, dict) and x.get("type") in ("text", "input_text", "output_text"))[:LINE]
-    return ""
-
-
-def parse_record(provider, x, meta):
-    """Return only visible conversation text; never tool arguments or instructions."""
-    if not isinstance(x, dict):
-        return None
-    kind = x.get("type")
-    msg = None
-    if provider == "claude":
-        if x.get("isSidechain") or x.get("isMeta") or x.get("isCompactSummary"):
-            return None
-        if x.get("sessionId"):
-            if meta.get("nativeId") and meta["nativeId"] != x["sessionId"]:
-                meta["identityConflict"] = True
-            meta["nativeId"] = clean(x["sessionId"], 100)
-        if x.get("cwd") and not meta.get("cwd"):
-            meta["cwd"] = clean(x["cwd"], 32000)
-        if x.get("version"):
-            meta["sourceVersion"] = clean(x["version"], 30)
-            meta["formatSupported"] = str(x["version"]).split(".")[0] in ("1", "2")
-        if kind in ("custom-title", "ai-title"):
-            meta["title"] = clean(x.get("customTitle") or x.get("aiTitle"), 160)
-        if kind in ("user", "assistant") and isinstance(x.get("message"), dict):
-            msg = (kind, text_blocks(x["message"].get("content")))
-    elif provider == "codex":
-        p = x.get("payload")
-        if not isinstance(p, dict):
-            return None
-        if kind == "session_meta":
-            native = p.get("id") or p.get("session_id")
-            if native:
-                if meta.get("nativeId") and meta["nativeId"] != native:
-                    meta["identityConflict"] = True
-                meta["nativeId"] = clean(native, 100)
-            meta["cwd"] = clean(p.get("cwd"), 32000)
-            meta["sourceVersion"] = clean(p.get("cli_version"), 30)
-            meta["formatSupported"] = bool(native and p.get("cwd"))
-            meta["subagent"] = isinstance(p.get("source"), dict) or p.get("source") in ("subagent", "exec", "internal", "mcp")
-            meta["historyBase"] = bool(p.get("history_base"))
-        if kind == "response_item" and p.get("type") == "message" and p.get("role") in ("user", "assistant"):
-            msg = (p["role"], text_blocks(p.get("content")))
-        elif kind == "event_msg" and p.get("type") == "user_message":
-            msg = ("user", clean(p.get("message"), LINE))
-    elif provider == "pi":
-        if kind == "session":
-            meta.update(nativeId=clean(x.get("id"), 100), cwd=clean(x.get("cwd"), 32000),
-                        sourceVersion=str(x.get("version", 1)), formatSupported=x.get("version", 1) in (1, 2, 3))
-        if kind == "session_info":
-            meta["title"] = clean(x.get("name"), 160)
-        if kind == "message" and isinstance(x.get("message"), dict):
-            m = x["message"]
-            if m.get("role") in ("user", "assistant"):
-                msg = (m["role"], text_blocks(m.get("content")))
-    if msg and msg[1]:
-        at = timestamp(x.get("timestamp"))
-        if at:
-            meta["createdAt"] = min(meta.get("createdAt") or at, at)
-            meta["lastConversationAt"] = max(meta.get("lastConversationAt") or at, at)
-        if not meta.get("title") and msg[0] == "user":
-            meta["title"] = clean(msg[1].split("\n")[0], 160)
-        return {"role": msg[0], "text": redact(msg[1]), "at": at,
-                "id": clean(x.get("id"), 100), "parentId": clean(x.get("parentId"), 100)}
-    return None
-
 
 def read_window(path, offset=0, budget=CHUNK):
     """Bounded read; zstd has a finite replay and ratio budget, no unbounded seek."""
@@ -398,6 +316,10 @@ def candidate(provider, name):
         return name.endswith(".jsonl") and bool(UUID.fullmatch(name[:-6]))
     if provider == "codex":
         return name.startswith("rollout-") and name.endswith((".jsonl", ".jsonl.zst"))
+    if provider == "copilot":
+        return name == "events.jsonl"
+    if provider == "gemini":
+        return name.startswith("session-") and name.endswith((".json", ".jsonl"))
     return provider == "pi" and name.endswith(".jsonl") and bool(UUID.search(name[:-6]))
 
 
@@ -428,6 +350,10 @@ def enumerate_sources(profile):
                             if entry.is_dir(follow_symlinks=False):
                                 stack.append((p, depth + 1))
                             elif candidate(profile["provider"], entry.name):
+                                if profile["provider"] == "copilot" and not UUID.fullmatch(p.parent.name):
+                                    continue
+                                if profile["provider"] == "gemini" and p.parent.name != "chats":
+                                    continue
                                 p = source_file(p, r)
                                 ident = digest(physical(p))
                                 if ident not in seen and not any(p.is_relative_to(Path(e)) for e in profile.get("excluded", [])):
@@ -466,8 +392,9 @@ def profile_validate(p):
     config = local_path(p.get("configHome", ""), True)
     script = p.get("launchScript")
     if script:
-        if p["provider"] != "pi" or not exe or exe.name.lower() != "node.exe" or Path(script).name != "pi-launcher.js" or not local_path(script).is_file():
-            raise HubError("Only Pi's verified native Node launcher is allowed as a script target")
+        allowed = {"pi": "pi-launcher.js", "gemini": "gemini.js"}.get(p["provider"])
+        if not allowed or not exe or exe.name.lower() != "node.exe" or Path(script).name != allowed or not local_path(script).is_file():
+            raise HubError("Only a supported provider's explicit native Node launcher is allowed as a script target")
     for root in roots:
         if p["provider"] in ("claude", "codex", "pi"):
             expected = config / ("projects" if p["provider"] == "claude" else "sessions")
@@ -498,11 +425,44 @@ def profile_validate(p):
             p["env"].update(expected_env)
         else:
             p["resumeDisabled"] = "OpenCode requires explicit opencode data/config folders for isolated resume"
+    if p["provider"] == "copilot":
+        p["env"]["COPILOT_HOME"] = str(config)
+        p["resumeDisabled"] = "History supported; a real Copilot CLI and native continuation have not been verified"
+    if p["provider"] == "gemini":
+        if config.name != ".gemini" or any(not Path(root).is_relative_to(config / "tmp") for root in roots):
+            p["resumeDisabled"] = "Gemini resume requires an explicit .gemini config home and tmp history root"
+        if "GEMINI_CLI_HOME" in env and Path(env["GEMINI_CLI_HOME"]).resolve() != config.parent.resolve():
+            raise HubError("Gemini environment does not match its explicit config home")
+        p["env"]["GEMINI_CLI_HOME"] = str(config.parent)
+        if p.get("projectPath"):
+            local_path(p["projectPath"], True)
     for exclusion in p.get("excluded", []):
         local_path(exclusion)
         if not any(Path(exclusion).is_relative_to(Path(r)) for r in roots):
             raise HubError("Exclusions must be inside the approved roots")
     return p
+
+
+def source_records(provider, path, offset=0, skip=False):
+    data, eof = read_window(path, offset)
+    if provider != "gemini":
+        rows, end, skip, bad, big = records_in(data, eof, skip)
+        return data, rows, end, skip, bad, big, eof
+    # Gemini journals can replace/rewind messages. Never index an incomplete
+    # projection or retain removed text from a prior file generation.
+    if not eof:
+        return data, [], 0, False, 0, 1, False
+    try:
+        if path.suffix == ".json":
+            rows = [json.loads(data)]
+        else:
+            rows, end, _, bad, big = records_in(data, eof)
+            if end != len(data) or bad or big:
+                raise ValueError("Incomplete Gemini journal")
+        rows = _adapters.gemini.replay(rows)
+        return data, rows, len(data), False, 0, 0, True
+    except (ValueError, TypeError, AttributeError, KeyError, RecursionError):
+        return data, [], 0, False, 1, 0, False
 
 
 def scan_file(store, profile, path, root, full=False):
@@ -514,20 +474,19 @@ def scan_file(store, profile, path, root, full=False):
     if changed:
         # Restart on replacement, shrink or same-size rewrite; append preserves cursor.
         old = cache.get("stamp", [])
-        if not old or old[:2] != stamp[:2] or stamp[2] <= old[2] or old[4] != stamp[4]:
+        if profile["provider"] == "gemini" or not old or old[:2] != stamp[:2] or stamp[2] <= old[2] or old[4] != stamp[4]:
             cache = {}
             store.db.execute("DELETE FROM content WHERE k=?", (ident,))
         cache.update(stamp=stamp, parser=PARSER)
         cache["complete"] = False
     meta = cache.get("meta", {"title": "", "formatSupported": False})
     if changed or not meta.get("nativeId"):
-        data, eof = read_window(path)
-        rows, end, _, bad, big = records_in(data, eof)
+        data, rows, end, _, bad, big, eof = source_records(profile["provider"], path)
         for x in rows:
             parse_record(profile["provider"], x, meta)
         cache["malformed"] = bad
         cache["oversized"] = big
-        if path.suffix != ".zst" and stamp[2] > CHUNK:
+        if profile["provider"] != "gemini" and path.suffix != ".zst" and stamp[2] > CHUNK:
             with path.open("rb") as f:
                 f.seek(max(0, stamp[2] - CHUNK))
                 tail = f.read(CHUNK)
@@ -535,10 +494,12 @@ def scan_file(store, profile, path, root, full=False):
             for x in records_in(tail)[0]:
                 parse_record(profile["provider"], x, meta)
         meta["timestampCoverage"] = "complete" if eof and end == len(data) and not bad and not big else "partial head/tail"
+        if profile["provider"] == "gemini" and not eof:
+            meta["formatSupported"] = False
+            meta["contentWarning"] = "Gemini history exceeds the complete replay budget or is malformed; metadata only"
     offset = cache.get("offset", 0)
     if full and profile.get("content") and not cache.get("complete"):
-        data, eof = read_window(path, offset)
-        rows, end, skip, bad, big = records_in(data, eof, cache.get("skip", False))
+        data, rows, end, skip, bad, big, eof = source_records(profile["provider"], path, offset, cache.get("skip", False))
         texts = []
         for x in rows:
             msg = parse_record(profile["provider"], x, meta)
@@ -548,7 +509,12 @@ def scan_file(store, profile, path, root, full=False):
             store.db.execute("INSERT INTO content VALUES (?,?)", (ident, "\n".join(texts)))
         cache.update(offset=offset + end, skip=skip, complete=eof and end == len(data),
                      malformed=cache.get("malformed", 0) + bad, oversized=cache.get("oversized", 0) + big)
-        meta["timestampCoverage"] = "complete" if cache["complete"] else "incremental"
+        meta["timestampCoverage"] = "complete" if cache["complete"] and not cache["malformed"] and not cache["oversized"] else "partial incremental"
+    if profile["provider"] == "gemini":
+        project = profile.get("projectPath", "")
+        # Gemini stores a hash, not cwd. Only an explicit exact user mapping
+        # with matching upstream SHA-256 can establish the original project.
+        meta["cwd"] = project if project and hashlib.sha256(project.encode()).hexdigest() == meta.get("projectHash") else ""
     cache["meta"] = meta
     store.set(cachekey, cache)
     native = meta.get("nativeId")
@@ -560,7 +526,7 @@ def scan_file(store, profile, path, root, full=False):
             "canonicalSourceIdentity": ident, "sourcePath": str(path), "root": root,
             "sourceKind": "file", "fileModifiedAt": timestamp(stamp[3] / 1000000),
             "fingerprint": stamp, "parserVersion": PARSER, "sourceBytes": stamp[2],
-            "indexBytes": cache.get("offset", 0), "indexComplete": cache.get("complete", False),
+            "indexBytes": cache.get("offset", 0), "indexComplete": cache.get("complete", False) and not cache.get("malformed") and not cache.get("oversized"),
             "malformed": cache.get("malformed", 0), "oversized": cache.get("oversized", 0),
             "targets": [profile["id"]], "stale": False}
 
@@ -698,7 +664,7 @@ def refresh(store, full=False, profile_id=None):
                     examined += 1
                     try:
                         before = store.get("file:" + digest([p["provider"], physical(path)]), {})
-                        if not full and before.get("stamp") == file_stamp(path) and before.get("parser") == PARSER:
+                        if p["provider"] != "gemini" and not full and before.get("stamp") == file_stamp(path) and before.get("parser") == PARSER:
                             ident = digest([p["provider"], physical(path)])
                             match = old_by_source.get(ident)
                             if match:
@@ -714,9 +680,10 @@ def refresh(store, full=False, profile_id=None):
                         count += 1
                 # Keep unprocessed records, marked stale; never erase on a partial batch.
                 found_keys = {r["key"] for r in found}
+                found_sources = {r["canonicalSourceIdentity"] for r in found}
                 for r in old:
                     if r["key"] not in found_keys:
-                        found.append({**r, "targets": [p["id"]], "stale": r.get("stale", False) or r["sourcePath"] not in live_paths or r["sourcePath"] in failed_paths})
+                        found.append({**r, "targets": [p["id"]], "stale": r.get("stale", False) or r["canonicalSourceIdentity"] in found_sources or r["sourcePath"] not in live_paths or r["sourcePath"] in failed_paths})
                 remaining = max(0, len(candidates) - cursor - examined)
                 status["remaining"] = remaining
                 store.set("cursor:" + p["id"], (cursor + examined) % max(1, len(candidates)))
@@ -833,8 +800,7 @@ def preview(store, key):
         for msg in result["messages"]:
             msg["text"] = msg["text"][:2000]
         return result
-    data, eof = read_window(p, 0, CHUNK)
-    rows, consumed, _, malformed, oversized = records_in(data, eof)
+    data, rows, consumed, _, malformed, oversized, eof = source_records(r["provider"], p)
     complete = eof and consumed == len(data) and not malformed and not oversized
     messages, meta = [], {}
     # Pi previews follow active ancestry only when the whole file fits the budget.
@@ -889,7 +855,8 @@ def running_provider(provider):
         if not ok:
             return None
         names = {"claude": {"claude.exe"}, "codex": {"codex.exe"},
-                 "opencode": {"opencode.exe"}, "pi": {"node.exe", "pi.exe"}}[provider]
+                 "opencode": {"opencode.exe"}, "pi": {"node.exe", "pi.exe"},
+                 "copilot": {"copilot.exe"}, "gemini": {"node.exe", "gemini.exe"}}[provider]
         while ok:
             if entry.szExeFile.casefold() in names:
                 return True
@@ -931,7 +898,8 @@ def resume_spec(store, key, profile_id, active_probe=running_provider):
     if receipt.get("state") in ("launching", "unverified") and time.time() - receipt.get("epoch", 0) < 60:
         raise HubError("This session was just requested; duplicate launch refused")
     args = {"claude": ["--resume", native], "codex": ["resume", native],
-            "opencode": ["--session", native], "pi": ["--session", str(path)]}[r["provider"]]
+            "opencode": ["--session", native], "pi": ["--session", str(path)],
+            "gemini": ["--session-file", str(path)]}[r["provider"]]
     prefix = [p["launchScript"]] if p.get("launchScript") else []
     return {"argv": [p["executable"], *prefix, *args], "cwd": str(cwd), "env": p["env"], "profile": p["id"]}
 
@@ -957,7 +925,7 @@ def launch(root, key, profile_id):
 def profile_environment(overrides):
     # Do not inspect or log credential values. Drop inherited account selection,
     # auth and provider routing; only explicit directory mappings are restored.
-    prefixes = ("ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "OPENCODE_", "PI_", "AZURE_OPENAI_", "AWS_", "GEMINI_", "GOOGLE_API_")
+    prefixes = ("ANTHROPIC_", "CLAUDE_", "CODEX_", "OPENAI_", "OPENCODE_", "PI_", "AZURE_OPENAI_", "AWS_", "GEMINI_", "GOOGLE_", "COPILOT_", "GITHUB_", "GH_")
     env = {name: value for name, value in os.environ.items()
            if name not in set().union(*ENV_NAMES.values())
            and not name.upper().startswith(prefixes)
@@ -975,8 +943,12 @@ def probe():
         script = Path.home() / ".pi/agent/bin/pi-launcher.js" if name == "pi" else None
         if name == "pi" and not exe and script.is_file():
             exe = shutil.which("node.exe")
+        if name == "gemini" and not exe:
+            script = Path(os.environ.get("APPDATA", "")) / "npm/node_modules/@google/gemini-cli/bundle/gemini.js"
+            if script.is_file():
+                exe = shutil.which("node.exe")
         versions[name] = {"installed": bool(exe), "executable": str(Path(exe).resolve()) if exe else None,
-                          "launchScript": str(script) if name == "pi" and script.is_file() else None,
+                          "launchScript": str(script) if script and script.is_file() else None,
                           "state": "native executable found" if exe else "native .exe missing; shell shims are disabled"}
     return {"providers": versions, "python": sys.version.split()[0], "sqlite": sqlite3.sqlite_version,
             "platform": sys.platform, "schema": SCHEMA}
@@ -997,7 +969,7 @@ def rpc(store, req):
         profiles = store.get("profiles", [])
         old = next((x for x in profiles if x["id"] == p["id"]), None)
         # Configuration edits invalidate verification and project trust.
-        if not old or any(old.get(x) != p.get(x) for x in ("executable", "configHome", "roots", "env")):
+        if not old or any(old.get(x) != p.get(x) for x in ("executable", "launchScript", "configHome", "roots", "env", "projectPath")):
             p["versionVerified"] = False
             p["trustedProjects"] = []
         else:
@@ -1034,7 +1006,7 @@ def rpc(store, req):
         result = subprocess.run([p["executable"], *prefix, "--version"], stdin=subprocess.DEVNULL,
                                 capture_output=True, timeout=8, shell=False, cwd=str(store.root), env=profile_environment(p["env"]))
         version = clean(result.stdout.decode("utf-8", "replace"), 100).strip()
-        expected = {"claude": r"2\.1\.322", "codex": r"0\.164\.0", "opencode": r"1\.3\.17", "pi": r"1\.1\.0"}[p["provider"]]
+        expected = {"claude": r"2\.1\.322", "codex": r"0\.164\.0", "opencode": r"1\.3\.17", "pi": r"1\.1\.0", "gemini": r"0\.49\.0", "copilot": r"(?!)"}[p["provider"]]
         verified = result.returncode == 0 and bool(re.search(r"(?<![\d.])" + expected + r"(?![\d.])", version))
         for item in profiles:
             if item["id"] == p["id"]:

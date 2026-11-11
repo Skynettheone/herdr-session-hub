@@ -20,3 +20,17 @@ Sources: [PyCA cryptography](https://github.com/pyca/cryptography),
 [pycparser](https://github.com/eliben/pycparser).
 Python, SQLite, Herdr, Node and provider CLIs are separately installed software,
 not redistributed by this bundle. Their upstream licenses apply separately.
+
+## Official Herdr artwork
+
+`mods/session-hub/assets/herdr-logo.svg` is the unmodified official sheep mark
+from [herdrdev/herdr assets/logo.svg](https://github.com/herdrdev/herdr/blob/ee5bfb5041bb3e4a49d591c72308aae3c81ecdde/assets/logo.svg),
+commit `ee5bfb5041bb3e4a49d591c72308aae3c81ecdde`. The repository is Apache-2.0;
+its full license is retained beside the image as `HERDR-LICENSE.txt`. The MIT
+license of Session Hub does not replace that artwork license. No endorsement or
+trademark ownership is claimed.
+
+Agent icons are resolved from the installed Herdr `knownAgents()` catalog at
+runtime; they are not copied into this repository or its bundle. Herdr retains
+its bundled icon-source license notices. `Program.tint` controls native SVG masks
+versus full-color artwork. All other Hub icons are original simple SVG drawings.

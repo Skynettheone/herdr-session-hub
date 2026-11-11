@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
-import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime } from '../mods/session-hub/model.js';
+import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability } from '../mods/session-hub/model.js';
 
 test('literal transcript display, grouping, pagination and safe local launch', () => {
   assert.equal(safeText('hello\u202e\x1b; $(x)'), 'hello; $(x)');
@@ -14,13 +14,13 @@ test('literal transcript display, grouping, pagination and safe local launch', (
 });
 
 // The host mock checks behavior after deferred actions, not only initial render.
-async function panel() {
-  const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[];
+async function panel(initialHook) {
+  const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[], artwork=[];
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
-  const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', nativeId:'11111111-2222-4333-8444-555555555555'};
-  let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',enabled:true,versionVerified:true}],statuses:[]};
+  const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
+  let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',enabled:true,versionVerified:true,trustedProjects:[]}],statuses:[]};
   let fail = false;
-  let listHook = async () => {};
+  let listHook = async request => { if(initialHook) { const hook=initialHook;initialHook=null;await hook(request,view,cx); } };
   function element(initial) {
     let id=initial;
     let proxy;
@@ -48,6 +48,9 @@ async function panel() {
     appHome:()=> 'C:/isolated', focused:()=>({space:'local'}), spaces:()=>[{id:'local',machine:null}], theme:()=>palette,
     readTextFile:async()=>JSON.stringify({schema:1,python:'python.exe',helper:'C:/helper.py',state:'C:/hub-state',base:'C:/'}),
     pickFolder:async()=> 'C:/Chosen folder',
+    knownAgents:async()=>[{key:'claude',name:'Claude Code',icon:'icons/claude.svg',tint:false,run:['claude'],installed:true},
+      {key:'cursor',name:'Cursor',icon:'icons/cursor.svg',tint:true,run:['agent'],installed:false},
+      {key:'custom-agent',name:'Custom agent',run:['custom.exe'],installed:true}],
     nextCommand:()=>new Promise(()=>{}),
     exec:async(_exe,args)=>{
       if (args[0] === '--version') return {code:0,stdout:'herdr-app 0.1.15\n'};
@@ -56,6 +59,7 @@ async function panel() {
       let result=data;
       if(req.action==='list') { result={...data,querySnapshot:req.query||''};await listHook(req); }
       if(req.action==='preview')result={messages:[{role:'user',text:'literal $(text)'}],partial:true};
+      if(req.action==='trust-project')data.profiles[0].trustedProjects=[req.confirmation];
       if(req.action==='resume')result={argv:['python.exe','literal arg'],folder:'C:/Project'};
       if(req.action==='refresh')result={advanced:1,statuses:[]};
       return {code:0,stdout:JSON.stringify({ok:true,result})};
@@ -65,7 +69,8 @@ async function panel() {
   const context=vm.createContext({console,JSON,Map,Set,Date,Error,String,Object,Array,Math,Promise});
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
-  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:element}), 'gpui-base':synthetic({v_flex:element,h_flex:element,Button:{new:element},InputState:inputState,Input:{new:element}}),herdr:synthetic(host),'./model.js':model};
+  const art = kind => path => {artwork.push({kind,path});return element();};
+  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image')}), 'gpui-base':synthetic({v_flex:element,h_flex:element,Button:{new:element},InputState:inputState,Input:{new:element}}),herdr:synthetic(host),'./model.js':model};
   await model.link(()=>{});await model.evaluate();
   const ui=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/ui.js',import.meta.url),'utf8'),{context});
   await ui.link(name=>sources[name]);await ui.evaluate();sources['./ui.js']=ui;
@@ -73,11 +78,12 @@ async function panel() {
   await module.link(name=>sources[name]);await module.evaluate();
   const view=new module.namespace.default();view.init({},cx);
   // init also starts an intentional command stream that remains pending.
-  await pending[0]; pending.length=0;
+  await pending[0]; await pending[1]; pending.splice(0,3);
   async function flush(){while(pending.length){const p=pending.shift();await p;}}
+  await flush();
   function draw(){controls.clear();styles.length=0;view.render(cx);}
   async function click(id){draw();assert.ok(controls.has(id),`visible control ${id}`);controls.get(id)({},cx);await flush();draw();}
-  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
+  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,artwork,setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
 }
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{
@@ -167,10 +173,27 @@ test('latest search survives an in-flight list and a final refresh batch',async(
   }
 });
 
+test('startup cannot replace an early filtered query with unfiltered results',async()=>{
+  const p=await panel(async(_request,view,cx)=>{view.query='early search';view.load(cx);});
+  assert.equal(p.view.data.querySnapshot,'early search');
+});
+
 test('typing path separators or arrows does not navigate away from a field',async()=>{
   const p=await panel();let focused=0;
   p.view.search.focus=()=>{focused++;};
   p.view.activeInput=p.view.formFields.root;
   p.view.key({key:'/'},p.cx);p.view.key({key:'down'},p.cx);
   assert.equal(focused,0);assert.equal(p.view.selected,undefined);
+});
+
+test('native agent catalog retains custom agents and renders original artwork',async()=>{
+  const p=await panel();p.draw();
+  assert.ok(p.artwork.some(a=>a.kind==='image'&&a.path==='mods/session-hub/assets/herdr-logo.svg'));
+  assert.ok(p.artwork.some(a=>a.kind==='image'&&a.path==='icons/claude.svg'));
+  await p.click('provider-gemini');assert.equal(p.requests.at(-1).provider,'gemini');
+  await p.click('settings');await p.click('settings-agents');
+  assert.ok(p.artwork.some(a=>a.kind==='svg'&&a.path==='icons/cursor.svg'));
+  assert.equal(p.view.agents.find(a=>a.key==='custom-agent').history,false);
+  assert.match(historyCapability(agentCatalog([{key:'amp',run:['amp']}])[0]),/unavailable/);
+  await p.click('connect-gemini');assert.equal(p.view.formProvider,'gemini');
 });

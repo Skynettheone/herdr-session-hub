@@ -47,6 +47,7 @@ $staging = Join-Path $modRoot ('.session-hub-stage-' + [guid]::NewGuid().ToStrin
 New-Item -ItemType Directory -Path $staging | Out-Null
 foreach ($name in @('main.js','model.js','ui.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination $staging }
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/icons') -Destination $staging -Recurse
+Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/assets') -Destination $staging -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper') -Destination $staging -Recurse
 Get-ChildItem -LiteralPath (Join-Path $staging 'helper') -Filter '*.pyc' -Recurse | ForEach-Object { Remove-Item -LiteralPath $_.FullName }
 @{schema=1;python=$runtimePython;helper=(Join-Path $destination 'helper/hub.py');state=(Join-Path $targetHome 'data/session-hub');base=$destination} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $staging 'runtime.json') -Encoding utf8NoBOM
