@@ -1,0 +1,15 @@
+.research/
+.venv/
+.dev/
+dist/
+__pycache__/
+*.pyc
+*.error
+*.hub
+*.hub.bak
+*.hsh
+*.lock
+!requirements-windows.lock
+runtime.json
+mods/session-hub/*.d.ts
+mods/session-hub/jsconfig.json
