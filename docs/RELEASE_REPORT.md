@@ -39,10 +39,31 @@ Run `python scripts/verify-package.py <unpacked-directory>` before installation.
 The sidecar detects accidental damage; it is not an independently signed release.
 Full native update/rollback acceptance and a signing strategy remain open.
 
+## Updated catalog/quality development bundle
+
+The follow-up bundle is
+`herdr-session-hub-0.1.0-dev-windows-x64-20261111203312.zip`, **4,486,735 bytes**.
+Both its staged payload and fresh extraction passed manifest verification:
+**82 files**, including independent provider modules, official artwork/license,
+genuine dark/light/community captures and the pinned development-lint recipe.
+No development state, auth or runtime configuration is included.
+
+SHA-256: `75dd9ce85597ce28e11b4a2384118bb0bd1ce938d78fdaa282ff9acffa044801`.
+This supersedes the earlier development bundle above. The report/checksum entry
+is recorded outside that ZIP after verification to avoid a checksum/report cycle.
+It remains local and `releaseReady=false`.
+
+The bundle build repeated Ruff, all **42 Python tests** (15.286 seconds), all
+**9 panel groups**, installed Herdr SDK check and locked-wheel hash verification.
+The measured 10k-record search page in this run took 0.146 seconds. Ordinary
+desktop permissions were used for link/junction safety fixtures.
+
 Git is initialized on `main` with the user-specified origin. Logical conventional
 commits are authored with the existing Git identity, without assistant names or
 authorship trailers. The user subsequently authorized pushing `main`; this does
 not authorize a production installation or a GitHub/gallery release.
 
-The authorized source push succeeded. Windows CI and both CodeQL language jobs
-passed on the corrected CI commit; direct run links are in TEST_RESULTS.md.
+The authorized source push succeeded. Earlier Windows CI and CodeQL language jobs
+passed; the new source commit's two streamlined workflows were accepted but remain
+queued without runner jobs. Direct links and the precise distinction between local
+passes and pending hosted validation are in TEST_RESULTS.md.

@@ -31,9 +31,9 @@ Herdr's built-in panels; controls retain semantic colors while original full-col
 preserved, matching Herdr's own agent menu.
 
 Unit/host-mock checks cover dark, light and partial community token maps,
-responsive navigation and state isolation. The redesigned initial layout rendered
-in the actual installed Herdr GUI. Full interactive community-theme visual review
-was interrupted when the user stopped Computer Use and remains a release gate.
+responsive navigation and state isolation. The renewed native pass covered dark,
+paper and custom community-format themes, including a 420px pane and a separate
+wide pane. Exhaustive control coverage remains a release gate.
 No claim of universal contrast for malformed or intentionally low-contrast user
 palettes is made; the mod respects the colors Herdr resolves for that theme.
 

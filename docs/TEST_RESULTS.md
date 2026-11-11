@@ -1,5 +1,10 @@
 # Test evidence — 2026-11-12
 
+Latest local result: **42 helper tests, 9 panel groups, Ruff, installed native SDK
+check and offline install/upgrade/uninstall smoke passed**. The final build repeated
+the suites (42 helper tests in 15.286 seconds). The follow-up section below supersedes
+the historical counts and interrupted-GUI observations.
+
 ## Environment
 
 Windows 11 (PowerShell reports Windows NT 10.0.26300.0), Herdr 0.1.15,
@@ -136,3 +141,13 @@ a multiplier. Both were corrected and observed again with the loaded transcript.
 community-format captures are under `docs/screenshots/`. No real histories or
 credential files were used. These checks do not prove every action in every theme
 or any actual native provider-context continuation.
+
+## Hosted follow-up checks
+
+Source commit `47a3a4b9a5471cb77f250e0179a2114661771869` was pushed to the
+user-requested origin. The streamlined [Windows workflow](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43096802794)
+and [combined CodeQL workflow](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43096802816)
+were accepted but remained **queued with zero assigned jobs** after repeated
+monitoring. No new hosted pass or failure is claimed. Earlier hosted successes
+above do not establish this commit's hosted result. The equivalent local fixture,
+lint and panel checks passed; native GUI/SDK/install checks were local as described.
