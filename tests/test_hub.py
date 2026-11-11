@@ -255,6 +255,19 @@ class HubTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(hub.HubError):
                 hub.approved_root(value)
 
+    def test_long_unicode_source_path(self):
+        config = self.base.joinpath(*(["Café long project directory"] * 8)) / "claude"
+        root = config / "projects"
+        root.mkdir(parents=True)
+        path = root / (ID + ".jsonl")
+        path.write_bytes(encode(fixture("claude", self.cwd)))
+        self.assertGreater(len(str(path)), 260)
+        p = {"id": "long", "provider": "claude", "roots": [str(root)], "configHome": str(config), "executable": sys.executable}
+        with hub.Store(self.state) as store:
+            row = self.scan(store, p)
+            self.assertEqual(row["nativeId"], ID)
+            self.assertEqual(len(hub.preview(store, row["key"])["messages"]), 2)
+
     def test_resume_exact_vector_profile_and_guards(self):
         for provider in ("claude", "codex", "pi"):
             with self.subTest(provider=provider), hub.Store(self.state / provider) as store:
