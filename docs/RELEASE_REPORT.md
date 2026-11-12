@@ -1,5 +1,44 @@
 # Release preparation report — 2026-11-12
 
+## Windows 0.1.0 publication
+
+The user explicitly authorized publication. Release
+[v0.1.0](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0)
+was published at **2026-11-12T12:02:01Z** as the latest stable Windows-only release.
+The tag targets `e856ecd0b458304b0518e94d686700a21fb93d9d`, adding only the final
+test/security/receipt documentation to tested source `61884d1`. Prepublication
+checks confirmed the same passing platform CI/CodeQL and zero open alerts,
+unchanged runtime/installer/tests, the frozen ZIP hash and 59-file extraction.
+
+Uploaded four assets only: the verified Windows ZIP, its .zip.sha256 sidecar,
+SHA256SUMS.txt and RELEASE_NOTES.md. All four were downloaded and compared before
+publishing, then downloaded and verified again after publication. The tag target,
+non-draft/non-prerelease state and latest-stable status were confirmed through
+GitHub. No experimental OS assets, provider data, local state or credentials
+were uploaded.
+
+| Published asset | SHA-256 |
+|---|---|
+| herdr-session-hub-0.1.0-windows-x64-20261112112444.zip | `bb9bd3e13794165d1fb6d29540f782ff20f00bbe6c8ecf7a2a27f8083c9f2309` |
+| herdr-session-hub-0.1.0-windows-x64-20261112112444.zip.sha256 | `150a50dc8c20d13bb3e040d83eb89549d4979f11893dec46c0281b2f9be8061b` |
+| SHA256SUMS.txt | `1666157c23c852a4560de879da8a3e4b94f44d181d2d050210e73c1b7142454c` |
+| RELEASE_NOTES.md | `3120c6cecd9c6156dc96e12d9ddc7c490477f0933844ca2db34a27de23a2a118` |
+
+The ZIP and individual sidecar are unchanged from the approved frozen build.
+Publication notes update the date/status and use absolute installation links;
+the published aggregate manifest covers those publication files. Original
+preparation receipts and their hashes remain below. GitHub normalizes release
+body line endings; downloaded assets match exact bytes.
+
+At the user's request, the release title was shortened to **Herdr Session Hub
+0.1.0** and its web-page notes were rewritten with clearer installation steps,
+single-line paragraphs, concise limits and no long dashes. Implementation flags
+and lengthy test/provenance detail stay in this report. Published ZIP, downloadable
+notes and checksum assets remain frozen; the editable release page is the current
+presentation. Repository download links are updated only after observing publication.
+No production configuration was installed or changed. The existing About/topics
+were inspected but not edited; no new gallery topic or listing was created.
+
 ## Current Windows 0.1.0 stable preparation
 
 The user explicitly approves **Windows 11 x64-only stable scope**, superseding

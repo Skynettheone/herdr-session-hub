@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.1.0 — 2026-11-12 (prepared, unpublished)
+## 0.1.0 - 2026-11-12
 
-- Prepare the first stable release for Windows 11 x64, Herdr 0.1.15 and the five
+- Publish the first stable release for Windows 11 x64, Herdr 0.1.15 and the five
   exact provider versions in the compatibility matrix. Runtime compatibility,
   active-session and source-read-only safeguards remain unchanged.
 - Separate platform release metadata: Linux x64/macOS arm64 are
@@ -11,9 +11,10 @@
   package verifier, even with a regenerated manifest. Record Windows-only scope
   in source metadata and keep offline, allowlisted target bundles.
 - Complete stable release notes, install/upgrade/rollback documentation and
-  release receipts without publishing, tagging or installing into production.
+  release receipts. The verified Windows ZIP and checksum/notes assets are
+  published under v0.1.0; no production configuration was installed or modified.
 
-## 0.1.0-rc.1 — 2026-11-12 (unpublished)
+## 0.1.0-rc.1 - 2026-11-12 (unpublished)
 
 - Refresh the README with official artwork, genuine History/Usage captures,
   compatibility badges, install snippets and a gallery-style agent prompt.

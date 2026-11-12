@@ -1,7 +1,7 @@
 # F01–F16 implementation status — 2026-11-12
 
 “Implemented” below means code and stated tests exist. It does not mean all native
-provider acceptance gates passed on every OS. Version **0.1.0** is prepared as
+provider acceptance gates passed on every OS. Version **0.1.0** is published as
 the first Windows x64 stable release. macOS/Linux remain experimental with native
 continuation disabled until desktop acceptance. Their helper/key-store/source-lock
 and installer paths exist. See PORT_ACCEPTANCE.md.
@@ -46,7 +46,7 @@ bounded replay, unavailable deletion/native restore/remote sync and offline
 recorded-only Usage are deliberate guarded limits. No independent human audit or
 publisher signature is claimed. The chosen stable scope is Windows x64 only;
 macOS/Linux stay experimental pending native desktop acceptance. Production
-installation and publication need separate approval. Source commits and pushing to the
+installation and future publication need separate approval. Source commits and pushing to the
 requested origin were explicitly authorized.
 
 `version.json` records Windows releaseReady=true and stablePlatforms=[windows-x64].

@@ -1,9 +1,11 @@
 # Release and gallery checklist
 
-Current decision: prepare **0.1.0 stable for Windows x64 only**. Linux/macOS remain
-**0.1.0-experimental.1**, releaseReady=false, with continuation disabled. The user
-has not authorized publication, a tag, gallery listing or production installation.
-Preparation does not perform any of those actions.
+Current status: **[Windows 0.1.0 is published](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0)**
+under the user's explicit approval. Linux/macOS remain **0.1.0-experimental.1**,
+releaseReady=false, with continuation disabled and no attached stable-release
+assets. Production installation and repository About/topic changes were not
+performed. Future releases, gallery-setting changes and production installation
+need separate authorization.
 
 ## Prepared release inputs
 
@@ -19,7 +21,7 @@ upgrade backups and leaves original histories/layouts/keys intact. Tests and
 build/audit material remain in source, outside the install ZIP. There is no
 deployment workflow or automatic release publisher.
 
-## Only after explicit publication approval
+## Procedure for future authorized publications
 
 1. Recheck the approved commit against the release receipts and current CI. If
    executable/runtime/installer bytes change, repeat the relevant checks and build

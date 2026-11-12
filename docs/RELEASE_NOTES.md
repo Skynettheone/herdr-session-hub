@@ -1,62 +1,51 @@
 # Herdr Session Hub 0.1.0
 
-Prepared on 2026-11-12; not yet published. The first stable release supports
-**Windows 11 x64**, **Herdr GUI 0.1.15 / core 0.1.20** and **CPython 3.14 x64**.
-Read README and the user guide before installation. Installation/publication
-remain separate explicit user actions.
+The first stable release for **Windows 11 x64**. Requires **Herdr 0.1.15**, **Python 3.14 x64** and **PowerShell 7**.
 
-## Included
+## What's included
 
-- One collapsible History/Usage panel beside Files and Changes, native Herdr
-  agent artwork, responsive forms and semantic built-in/community theme colors.
-- Read-only local session discovery, metadata search, opt-in encrypted full-text
-  indexing, bounded previews, incremental/cancellable refresh and explicit profiles.
-- Native Windows continuation for Claude Code **2.1.322**, Codex **0.164.0**,
-  Pi **1.1.0**, OpenCode **1.3.17** and Gemini **0.49.0**. Unknown versions,
-  active ownership, ambiguous identities and untrusted projects fail closed.
-- Hub-only names, archive and reversible removal; encrypted metadata exchange
-  with dry-run import/conflict handling. Provider originals stay untouched.
-- Recorded local Usage graphs, UTC ranges, provider/profile filters, cache/token
-  totals, model/day/project breakdowns, averages and exact local pricing.
-- Offline hash-locked install, separate upgrade runtimes, backup/failed-swap
-  recovery, interrupted-install refusal and an uninstaller retaining state by default.
+- A collapsible **History / Usage** panel beside **Files** and **Changes**, using Herdr's icons and theme colors.
+- Local history discovery, search and previews for Claude Code, Codex, Pi, OpenCode and Gemini.
+- Native continuation with the selected profile and original project folder.
+- Token and cache charts, recorded cost estimates, date filters and model/project breakdowns.
+- Reversible names, archive and removal stored in Hub metadata. Original histories stay untouched.
 
-## Experimental platforms
+## Install on Windows
 
-Linux x64 and Apple Silicon macOS builds are **0.1.0-experimental.1**, not stable
-assets. Their native key stores, encryption, source locks and installer
-transactions pass automated platform tests. Native Herdr GUI, continuation and
-updater acceptance remain pending; **continuation is disabled**. Intel macOS and
-other architectures have no accepted bundle. Experimental builds cannot inherit
-Windows releaseReady=true. Use disposable homes for evaluating them.
+1. Download the **Windows ZIP** and **SHA256SUMS.txt** from this release's Assets.
+2. Check the ZIP's SHA-256, extract it and open PowerShell 7 in the extracted bundle folder.
+3. When you are ready to install, close Herdr and run:
 
-## Known boundaries
+```powershell
+pwsh -NoProfile -File scripts/install.ps1 -AppHome "$HOME/.config/herdr-app" -InstallProduction
+```
 
-- Usage describes recorded local events and known API-equivalent costs, not
-  subscription bills or live account-wide quotas. Unknown prices/partial coverage
-  remain visible. Oversized/compressed replay and source budgets are documented.
-- Gemini 0.49 duplicate session snapshots are ambiguous and cannot continue.
-  Conservative process ownership can block unrelated Node/provider processes.
-- Copilot local history is experimental; native continuation and persisted Usage
-  are unavailable. Cursor/Amp/other agents have catalog status without guessed readers.
-- Distinct company identities remain unverified. Two separate stores using one
-  real Claude identity and an unsigned negative control passed; no enterprise
-  isolation certification or independent human security audit is claimed.
-- Original deletion, native transcript migration/restore, remote sync, UNC/WSL
-  history roots and network mounts are unavailable. Unknown Herdr/provider builds
-  do not gain continuation compatibility from the stable release label.
+4. Reopen Herdr, then open the panel:
 
-## Verification and installation
+```powershell
+herdr-app do mod.open --name session-hub
+```
 
-The Windows native GUI, synthetic context continuation, real-cloud Claude
-continuation, Usage oracle, representative themes/forms, Herdr update/backup
-rollback and disposable offline installer checks have recorded acceptance.
-Current test totals, exact CI source and immutable ZIP receipts are in the
-[release report](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/RELEASE_REPORT.md).
-Checksums establish integrity against a trusted receipt, not publisher identity.
+Click **Dock** to add History beside Files and Changes in a new personal layout copy. In **Settings > Profiles**, add the history folders you want to browse, then **Refresh**. Switch between **History** and **Usage** in the same panel. Conversation indexing starts Off.
 
-Use the matching verified offline bundle and [installation guide](USER_GUIDE.md).
-The installer uses place=none, leaves existing layouts/keys unchanged and keeps
-upgrade backups. Dock is an explicit action creating a personal layout copy.
-Default uninstall retains Hub state; explicit purge targets only Hub-owned data.
-Keep a metadata backup and review native provider hooks/trust before continuation.
+[Full setup, upgrade and uninstall guide](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/USER_GUIDE.md)
+
+## Support and known limits
+
+- Stable support covers Windows x64 and the [verified provider versions](https://github.com/Skynettheone/herdr-session-hub#compatibility). Unknown versions, active sessions and ambiguous histories cannot continue.
+- macOS and Linux remain **experimental**, with native continuation disabled. No macOS/Linux ZIP is included in this release.
+- Usage shows recorded local activity and known API-equivalent costs. It does not provide subscription bills or live account quotas; missing data and unknown prices stay visible.
+- Duplicate Gemini snapshots cannot continue. Copilot history is experimental, and its continuation and persisted Usage are unavailable.
+- Remote sync, native transcript restore, original-history deletion and network/WSL history roots are unavailable. Distinct company-account isolation remains unverified.
+
+[Compatibility and privacy](https://github.com/Skynettheone/herdr-session-hub#compatibility) | [Tests and security review](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/RELEASE_REPORT.md)
+
+## Verified download
+
+Windows ZIP SHA-256:
+
+```text
+bb9bd3e13794165d1fb6d29540f782ff20f00bbe6c8ecf7a2a27f8083c9f2309
+```
+
+The ZIP is unchanged from the verified release build. Attached checksum files and downloadable notes preserve the original publication snapshot; this page contains the current wording and installation guidance.

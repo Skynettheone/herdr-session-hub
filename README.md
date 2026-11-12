@@ -35,10 +35,11 @@ use a verified bundle for your platform. **Copying only `mods/session-hub` is no
 sufficient**: the Python runtime and `runtime.json` must also be configured.
 [Agent installation guide](docs/INSTALL_WITH_AGENT.md) · [Recipe](RECIPE.md)
 
-The first stable release, **0.1.0**, is prepared for **Windows 11 x64**. No release
-or gallery listing has been published yet; use a verified bundle or build from
-source. Linux/macOS builds remain separately labeled **0.1.0-experimental.1**,
-with native continuation disabled. [Release notes](docs/RELEASE_NOTES.md)
+**[Download Windows 0.1.0](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0)**,
+the first stable release for **Windows 11 x64**. The release includes the verified
+offline ZIP, checksums and installation notes. Linux/macOS remain
+**0.1.0-experimental.1**, with native continuation disabled and no assets attached
+to this stable release. [Release notes](docs/RELEASE_NOTES.md)
 
 ### From a verified bundle
 
@@ -91,9 +92,9 @@ bills; recorded limit snapshots are not live account quotas.
 
 | Platform | Local helper / encrypted state | Native Herdr continuation |
 |---|---|---|
-| Windows 11 x64 — stable | Verified | Verified for the versions below |
-| Linux x64 — experimental | Tested on Ubuntu 24.04, including Secret Service | Disabled pending native GUI/context acceptance |
-| Apple Silicon macOS — experimental | Tested on macOS 15, including Keychain | Disabled pending native GUI/context acceptance |
+| Windows 11 x64 (stable) | Verified | Verified for the versions below |
+| Linux x64 (experimental) | Tested on Ubuntu 24.04, including Secret Service | Disabled pending native GUI/context acceptance |
+| Apple Silicon macOS (experimental) | Tested on macOS 15, including Keychain | Disabled pending native GUI/context acceptance |
 | Intel macOS / other architectures | No accepted bundle | Unavailable |
 
 Verified Windows CLIs: **Claude Code 2.1.322**, **Codex 0.164.0**, **Pi 1.1.0**,

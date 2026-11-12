@@ -4,7 +4,8 @@ The user now approves the first stable release for Windows x64 only. This
 supersedes the earlier requirement for macOS/Linux acceptance before any stable
 release. Version 0.1.0 is stable only on Windows; Linux/macOS artifacts are
 0.1.0-experimental.1 with releaseReady=false and continuation disabled. No
-production installation, release tag or publication is authorized.
+production installation is authorized. Windows v0.1.0 is published under the
+user's explicit approval; experimental port publication is not part of that release.
 
 ## Implemented port boundary
 
@@ -62,4 +63,4 @@ not authorize lifting this guard.
 Those native desktop checks are required before promoting either port to stable.
 Port source and local experimental bundles are prepared for that next acceptance
 step. They do not inherit Windows readiness, and their remaining acceptance does
-not block the user-approved Windows-only stable scope. Nothing is published.
+not block the published Windows-only stable release. No POSIX assets are published.

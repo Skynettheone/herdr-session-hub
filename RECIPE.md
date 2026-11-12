@@ -18,10 +18,11 @@ HTTP client. Installation is not part of a review/preparation-only request.
 Use a matching checksum-verified bundle with CPython 3.14 and Herdr 0.1.15.
 Version 0.1.0 stable supports Windows x64 only. POSIX bundles are explicitly
 0.1.0-experimental.1 and keep native continuation disabled.
-There are no published release assets or gallery listing yet. If no bundle was
-supplied, prepare one from the reviewed source using
+Get the Windows bundle and checksums from the
+[v0.1.0 release](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0).
+Experimental POSIX bundles are source-build only. If a source build is needed, use
 [CONTRIBUTING.md](https://github.com/Skynettheone/herdr-session-hub/blob/main/CONTRIBUTING.md); do not
-invent a latest-release download or copy only the mod directory. Follow
+invent an asset URL or copy only the mod directory. Follow
 [INSTALL_WITH_AGENT.md](docs/INSTALL_WITH_AGENT.md).
 
 Use `scripts/install.ps1` on Windows or `scripts/install.py install` on Linux x64 /

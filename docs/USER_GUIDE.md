@@ -18,7 +18,9 @@ The commands immediately below are for the verified Windows build. Experimental
 Linux x64 and Apple Silicon macOS setup is described separately afterward; those
 ports keep native provider continuation disabled pending desktop acceptance.
 
-Python 3.14 x64, Herdr 0.1.15 and the provider CLIs must be installed separately.
+Get the ZIP and SHA256SUMS.txt from the
+[Windows 0.1.0 release](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0).
+Python 3.14 x64, PowerShell 7, Herdr 0.1.15 and the provider CLIs must be installed separately.
 The offline install bundle contains pinned encryption wheels for its platform.
 Use a fresh extracted bundle. Installation validates every manifest entry and
 requires all runtime files and wheels before writing the app home. Comparing the

@@ -22,9 +22,10 @@ Follow its RECIPE.md and preserve my existing layouts, shortcuts and provider hi
    guards or experimental labels. Version 0.1.0 stable is Windows x64 only;
    macOS/Linux packages remain experimental with native continuation disabled.
 4. Use a matching verified bundle and independently compare its external ZIP
-   checksum with a trusted receipt. There are no published release assets yet;
-   prepare a bundle from the reviewed source if none is supplied. Build guidance
-   lives in the repository's CONTRIBUTING.md. Do not invent a latest-release or
+   checksum with a trusted receipt. Windows 0.1.0 assets are published at the
+   [pinned release](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0).
+   Use its Windows ZIP and SHA256SUMS.txt. Experimental POSIX bundles remain
+   source-build only; guidance is in CONTRIBUTING.md. Do not invent an asset or
    gallery URL, or pipe an unreviewed network script into a shell.
 5. A review/preparation request is not permission to install in production. Use
    an isolated app home for that request. If installation itself was authorized,

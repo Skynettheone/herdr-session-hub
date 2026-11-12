@@ -8,11 +8,12 @@ releaseReady=true and stablePlatforms=[windows-x64]. Portable core/installers an
 native key-store CI exist, but macOS/Linux remain 0.1.0-experimental.1 with
 releaseReady=false and native continuation disabled. See PORT_ACCEPTANCE.md.
 
-Version **0.1.0** is prepared for the tested Windows scope below. This inventory
+Version **0.1.0** is published for the tested Windows scope below. This inventory
 supersedes historical open-task lists; it separates release acceptance from
 unavailable evidence and deliberate capability boundaries.
-Production installation, a release tag, and gallery publication remain separate
-user decisions. None was performed by this follow-up.
+The user explicitly authorized the Windows release/tag after final verification.
+Production installation and gallery-setting changes remain separate user
+decisions; neither was performed.
 
 ## Local gaps addressed
 
@@ -71,7 +72,8 @@ can turn into real-account, real-OS or independent-review evidence.
 There is no known failing regression in the recorded supported scope. Broad
 claims of all-agent support, enterprise isolation, unlimited transcript coverage
 or independent certification remain unjustified. Windows-only stable preparation
-is authorized; final build, CI and immutable ZIP receipts are in RELEASE_REPORT.md.
+and publication are authorized; build, CI, ZIP receipts and download verification
+are in RELEASE_REPORT.md.
 Keep POSIX releaseReady=false and continuation disabled until native desktop
 acceptance is recorded. No additional desktops are currently available; that
 limits those experimental ports without blocking the Windows stable release.
