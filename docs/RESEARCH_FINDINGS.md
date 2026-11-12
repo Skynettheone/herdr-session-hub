@@ -136,3 +136,19 @@ not establish usage. Live cloud quotas would require credential/network access
 outside this extension's boundary; only recorded local snapshots are feasible.
 The new additive numeric cache stays inside encrypted Hub state and does not
 turn on conversation indexing. No upstream accounting implementation was copied.
+
+## Release hardening checkpoint — 2026-11-12
+
+Rechecked local source and the official Herdr changelog before this follow-up;
+0.1.15 remains its newest listed GUI release. The existing native continuation,
+form, privacy and Usage evidence supersedes several historical blocker notes.
+Large Gemini conversation replay remains intentionally bounded: lifting that
+limit safely requires whole-journal projection, not simply increasing a read size.
+
+Two actionable local release gaps were confirmed: installation did not invoke
+the package manifest verifier, and a same-version upgrade rebuilt the runtime
+directory already referenced by the old mod before validating its replacement.
+Harden verification before target writes and use a unique runtime per installation
+with automatic mod rollback on a failed final swap. Test corrupt/missing/linked
+package inputs and interrupted swaps using disposable roots only. Hash manifests
+establish integrity, not publisher authentication; no signing identity is available.

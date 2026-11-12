@@ -22,7 +22,16 @@ try {
     foreach($file in @('LICENSE','README.md','RECIPE.md','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','THIRD_PARTY_NOTICES.md','version.json','requirements-windows.lock','requirements-dev-windows.lock','ruff.toml','preview.png')) {
         if(Test-Path -LiteralPath (Join-Path $repo $file)) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $stage }
     }
-    foreach($folder in @('docs','scripts','tests')) { Copy-Item -LiteralPath (Join-Path $repo $folder) -Destination $stage -Recurse }
+    foreach($folder in @('docs','scripts','tests')) {
+        Get-ChildItem -LiteralPath (Join-Path $repo $folder) -File -Recurse | Where-Object {
+            $_.Extension -ne '.pyc' -and $_.FullName -notmatch '[\\/]__pycache__[\\/]'
+        } | ForEach-Object {
+            $relative=[IO.Path]::GetRelativePath($repo,$_.FullName)
+            $copy=Join-Path $stage $relative
+            New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($copy))|Out-Null
+            Copy-Item -LiteralPath $_.FullName -Destination $copy
+        }
+    }
     $mod=Join-Path $stage 'mods/session-hub'
     New-Item -ItemType Directory -Force -Path (Join-Path $mod 'helper')|Out-Null
     foreach($file in @('main.js','model.js','ui.js','usage.js','tabs.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$file") -Destination $mod }
@@ -50,8 +59,14 @@ try {
         "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower())  $relative"
     }
     $manifest|Set-Content -LiteralPath (Join-Path $stage 'SHA256SUMS.txt') -Encoding utf8NoBOM
+    & $Python -I -B (Join-Path $PSScriptRoot 'verify-package.py') $stage
+    if($LASTEXITCODE -ne 0) { throw 'Staged package integrity check failed' }
     $zip=$stage+'.zip'
     Compress-Archive -LiteralPath $stage -DestinationPath $zip
+    $extract=Join-Path $repo ('.dev/package-extract-'+[guid]::NewGuid().ToString('N'))
+    Expand-Archive -LiteralPath $zip -DestinationPath $extract
+    & $Python -I -B (Join-Path $PSScriptRoot 'verify-package.py') (Join-Path $extract $name)
+    if($LASTEXITCODE -ne 0) { throw 'Freshly extracted package integrity check failed' }
     "$((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLower())  $([IO.Path]::GetFileName($zip))" | Set-Content -LiteralPath ($zip+'.sha256') -Encoding utf8NoBOM
     Write-Output "Development bundle prepared: $zip"
 } finally { Pop-Location }
