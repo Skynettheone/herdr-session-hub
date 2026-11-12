@@ -2,6 +2,7 @@
 import datetime as dt
 import importlib.util
 import json
+import sqlite3
 from pathlib import Path
 import sys
 import tempfile
@@ -148,6 +149,16 @@ class AccountingTests(unittest.TestCase):
         self.assertEqual(len(result["projects"]), 2)
         self.assertTrue(all(p["label"] == "project" for p in result["projects"]))
 
+    def test_recorded_codex_limits_reject_invalid_percent_and_reset(self):
+        row = codex(tokens(), tokens())
+        row["payload"]["rate_limits"] = dict(primary=dict(used_percent=61, window_minutes=10080, resets_at=1794916800))
+        result = usage.parse("codex", [dict(type="session_meta", payload={"id":ID}), row])
+        self.assertEqual(result[3][0]["used"], 61)
+        self.assertEqual(result[3][0]["at"], "2026-11-10T12:00:00+00:00")
+        for value in (-1, 101, True, float("nan")):
+            row["payload"]["rate_limits"]["primary"]["used_percent"] = value
+            self.assertFalse(usage.parse("codex", [row])[3])
+
 
 class UsageIntegrationTests(unittest.TestCase):
     def setUp(self):
@@ -279,6 +290,32 @@ class UsageIntegrationTests(unittest.TestCase):
             second = self.refresh_usage(store)
             self.assertEqual(second["pending"], 0)
             self.assertEqual(second["totals"]["events"], 1)
+
+    def test_opencode_database_accounts_once_per_message_and_preserves_original(self):
+        config = self.base / "oc-config/opencode"
+        root = self.base / "oc-data/opencode"
+        config.mkdir(parents=True)
+        root.mkdir(parents=True)
+        path = root / "opencode.db"
+        db = sqlite3.connect(path)
+        db.execute("CREATE TABLE session(id TEXT,title TEXT,directory TEXT,time_created INTEGER,time_updated INTEGER,version TEXT,parent_id TEXT)")
+        db.execute("CREATE TABLE message(id TEXT,session_id TEXT,time_created INTEGER,data TEXT)")
+        db.execute("INSERT INTO session VALUES(?,?,?,?,?,?,NULL)", (ID,"Synthetic",str(self.base),0,0,"1.3.17"))
+        message = dict(role="assistant",modelID="oc-model",tokens=dict(input=10,output=20,reasoning=5,cache=dict(read=70,write=5)),cost=.25)
+        db.execute("INSERT INTO message VALUES(?,?,?,?)", ("msg-one", ID, 1794312000000,json.dumps(message)))
+        db.commit()
+        db.close()
+        original = path.read_bytes()
+        with hub.Store(self.base / "state") as store:
+            hub.rpc(store,dict(action="profile-save",profile=dict(id="oc",provider="opencode",roots=[str(root)],configHome=str(config),executable="",content=False)))
+            hub.refresh(store)
+            for _ in range(2):
+                result = self.refresh_usage(store)
+                self.assertEqual(result["totals"]["tokens"],110)
+                self.assertEqual(result["totals"]["events"],1)
+                self.assertEqual(result["totals"]["cost"],.25)
+        self.assertEqual(path.read_bytes(),original)
+        self.assertFalse(path.with_name("opencode.db-shm").exists())
 
 
 if __name__ == "__main__":

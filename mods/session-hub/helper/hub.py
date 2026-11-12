@@ -1216,8 +1216,11 @@ def usage_scan(store, row, cache, event_budget):
     for code, count in warnings.items():
         if count:
             prior[code] = prior.get(code, 0) + count
+    latest_limits = {}
+    for item in sorted(cache.get("limits", []) + limits, key=lambda x: x["at"], reverse=True):
+        latest_limits.setdefault(item["window"], item)
     return dict(version=parser.VERSION, stamp=stamp, offset=offset, cursor=cursor, skip=skip, pending=pending,
-                state=state, events=merged, warnings=prior, limits=sorted(cache.get("limits", []) + limits, key=lambda x: x["at"], reverse=True)[:4],
+                state=state, events=merged, warnings=prior, limits=list(latest_limits.values()),
                 guard=usage_guard(path, offset) if row["sourceKind"] != "database" else None,
                 at=dt.datetime.now(dt.timezone.utc).isoformat(), limited=limited)
 
@@ -1252,7 +1255,8 @@ def usage_rpc(store, req):
     namespaces = usage_namespaces(store, sources)
     all_events, coverage, limits, pending = [], {}, [], 0
     advanced, count, deadline = 0, 0, time.monotonic() + 4
-    budget = parser.MAX_EVENTS - sum(len(json.loads(v).get("events", [])) for (v,) in store.db.execute("SELECT v FROM kv WHERE k LIKE 'usage:file:%'"))
+    caches = (json.loads(v) for (v,) in store.db.execute("SELECT v FROM kv WHERE k LIKE 'usage:file:%'"))
+    budget = parser.MAX_EVENTS - sum(len(c.get("events", [])) for c in caches if c.get("version") == parser.VERSION)
     for row in sources:
         cachekey = "usage:file:" + row["canonicalSourceIdentity"]
         cache = store.get(cachekey, {})
@@ -1268,7 +1272,7 @@ def usage_rpc(store, req):
             needs = cache.get("version") != parser.VERSION or cache.get("stamp") != stamp or cache.get("pending")
             if needs and req["action"] == "usage-refresh" and count < 8 and time.monotonic() < deadline:
                 count += 1
-                before_count = len(cache.get("events", []))
+                before_count = len(cache.get("events", [])) if cache.get("version") == parser.VERSION else 0
                 cache = usage_scan(store, row, cache, max(0, budget))
                 budget -= len(cache["events"]) - before_count
                 store.set(cachekey, cache)
@@ -1289,14 +1293,17 @@ def usage_rpc(store, req):
                                    "projectIdentity": digest(os.path.normcase(os.path.normpath(row.get("cwd") or "Unknown project"))),
                                    "project": redact(clean(Path(row.get("cwd") or "Unknown project").name, 120))})
             for limit in cache.get("limits", []):
-                limits.append({**limit, "provider": row["provider"], "profiles": row["targets"]})
+                limits.append({**limit, "provider": row["provider"], "profiles": sorted(row["targets"]), "scope": namespaces[row["canonicalSourceIdentity"]]})
         except (HubError, OSError, ValueError, TypeError, sqlite3.Error, zstd.ZstdError):
             coverage["source unavailable or changed during read"] = coverage.get("source unavailable or changed during read", 0) + 1
     if req["action"] == "usage-refresh":
         store.set("usage:lastRefresh", dt.datetime.now(dt.timezone.utc).isoformat())
+    latest_limits = {}
+    for item in sorted(limits, key=lambda x: x["at"], reverse=True):
+        latest_limits.setdefault((item["scope"], item["window"]), item)
     summary = parser.aggregate(all_events, req, rates)
     summary.update(coverage=coverage, pending=pending, sources=len(sources), advanced=advanced,
-                   limits=sorted(limits, key=lambda x: x["at"], reverse=True)[:8], rates=rates,
+                   limits=list(latest_limits.values())[:64], rates=rates,
                    lastRefresh=store.get("usage:lastRefresh"), scope="Configured local history; archived/hidden sessions included. No subagent directory scan.")
     return summary
 
