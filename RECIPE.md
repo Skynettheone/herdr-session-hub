@@ -1,9 +1,10 @@
 # Herdr Session Hub
 
-A native History and Usage panel beside Herdr's Files and Changes. Find local
-agent sessions, read safe previews, organize without editing originals, and
-continue supported native sessions in their recorded project. Switch to Usage
-for themed token/cache/cost graphs and numeric breakdowns.
+Stable for Windows 11 x64 with Herdr 0.1.15. macOS and Linux are experimental,
+with native session continuation disabled. Browse, search and preview local agent
+histories in one native History and Usage panel beside Files and Changes.
+Organize without editing originals, continue verified Windows sessions in their
+recorded project, and inspect token/cache/cost graphs and numeric breakdowns.
 
 ![Session Hub](preview.png)
 
