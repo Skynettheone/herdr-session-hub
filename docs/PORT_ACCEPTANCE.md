@@ -1,9 +1,10 @@
 # Platform ports and release scope — 2026-11-12
 
-The user requires macOS/Linux ports before production readiness and confirmed
-that no additional native desktops are available. This supersedes the earlier
-proposal to accept a Windows-only production scope. `releaseReady=false` remains
-intentional. No production installation, release tag or publication is authorized.
+The user now approves the first stable release for Windows x64 only. This
+supersedes the earlier requirement for macOS/Linux acceptance before any stable
+release. Version 0.1.0 is stable only on Windows; Linux/macOS artifacts are
+0.1.0-experimental.1 with releaseReady=false and continuation disabled. No
+production installation, release tag or publication is authorized.
 
 ## Implemented port boundary
 
@@ -58,7 +59,7 @@ by the user. Do not enable `native_continuation_verified()` for a target until
 that evidence is recorded and reviewed. Hosted unit/key-store checks alone do
 not authorize lifting this guard.
 
-The requested production readiness cannot be established in the current
-environment without those native desktop checks. Port source and local
-experimental bundles are prepared for that next acceptance step; they are not
-published or described as a production release.
+Those native desktop checks are required before promoting either port to stable.
+Port source and local experimental bundles are prepared for that next acceptance
+step. They do not inherit Windows readiness, and their remaining acceptance does
+not block the user-approved Windows-only stable scope. Nothing is published.

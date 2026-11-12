@@ -19,7 +19,8 @@ Follow its RECIPE.md and preserve my existing layouts, shortcuts and provider hi
    key store for Hub's own encryption key.
 3. Check the compatibility table in README. Keep unsupported continuation,
    original deletion, native restore and remote sync disabled. Do not remove
-   guards, candidate labels or release gates to make installation appear ready.
+   guards or experimental labels. Version 0.1.0 stable is Windows x64 only;
+   macOS/Linux packages remain experimental with native continuation disabled.
 4. Use a matching verified bundle and independently compare its external ZIP
    checksum with a trusted receipt. There are no published release assets yet;
    prepare a bundle from the reviewed source if none is supplied. Build guidance

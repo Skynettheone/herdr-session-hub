@@ -16,6 +16,8 @@ state. A user-requested native provider can run its own hooks/network. Hub has n
 HTTP client. Installation is not part of a review/preparation-only request.
 
 Use a matching checksum-verified bundle with CPython 3.14 and Herdr 0.1.15.
+Version 0.1.0 stable supports Windows x64 only. POSIX bundles are explicitly
+0.1.0-experimental.1 and keep native continuation disabled.
 There are no published release assets or gallery listing yet. If no bundle was
 supplied, prepare one from the reviewed source using
 [CONTRIBUTING.md](https://github.com/Skynettheone/herdr-session-hub/blob/main/CONTRIBUTING.md); do not
@@ -87,7 +89,7 @@ Offline wheels and platform installers accompany the mod in install bundles.
   OpenCode 1.3.17 and Gemini 0.49.0 with Herdr 0.1.15/core 0.1.20.
 - Linux/macOS helper/key-store tests pass, but native Herdr GUI/context acceptance
   is pending. Continuation stays disabled there. Other architectures have no
-  accepted bundle. Do not remove these guards or mislabel a candidate as stable.
+  accepted bundle. Do not remove these guards or label an experimental port stable.
 - Shared/duplicate identities, active writers, unknown cwd, giant/partial sources
   and version drift need their visible disabled/partial states. Gemini replay is
   bounded; duplicate snapshots are ambiguous. See the user guide for budgets.

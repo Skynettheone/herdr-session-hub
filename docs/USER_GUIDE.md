@@ -1,9 +1,11 @@
 # Using Session Hub
 
-This build is the 0.1.0-rc.1 candidate. Four primary CLIs passed native Herdr
-continuation with disposable histories and a loopback model fixture. Herdr
-update/rollback passed in an isolated installation. Cloud-account isolation and
-independent security review remain unverified. Keep a separate metadata backup.
+Version 0.1.0 stable supports Windows 11 x64 with Herdr 0.1.15. Claude, Codex,
+Pi, OpenCode and Gemini passed native continuation with disposable histories and
+a loopback model fixture. Herdr update/rollback passed in an isolated installation.
+Linux/macOS builds are 0.1.0-experimental.1 with continuation disabled. Distinct
+company-account isolation and an independent human audit remain unverified.
+Keep a separate metadata backup.
 
 The follow-up manual assessment and fixes are in SECURITY_REVIEW.md. Two
 separately configured profiles were signed into the same real account; distinct

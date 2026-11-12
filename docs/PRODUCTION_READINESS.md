@@ -1,17 +1,16 @@
 # Production readiness — 2026-11-12
 
-## Current decision: native ports required
+## Current decision: Windows x64 first stable release
 
-The user explicitly declined Windows-only production scope and requires macOS
-and Linux ports first. Portable core/installers/locked bundles and native OS CI
-now exist; native Herdr GUI/provider acceptance on those desktops is unavailable
-in this environment. POSIX continuation stays disabled. See PORT_ACCEPTANCE.md
-for exact targets and evidence. `releaseReady=false` remains correct; scope
-selection itself is no longer the outstanding decision.
+The user now explicitly approves Windows x64-only stable scope, superseding the
+earlier requirement to accept macOS/Linux first. Windows 0.1.0 metadata records
+releaseReady=true and stablePlatforms=[windows-x64]. Portable core/installers and
+native key-store CI exist, but macOS/Linux remain 0.1.0-experimental.1 with
+releaseReady=false and native continuation disabled. See PORT_ACCEPTANCE.md.
 
-The candidate is verified for the scope below, but remains **0.1.0-rc.1**. This
-inventory supersedes historical open-task lists; it separates defects we can
-fix locally from unavailable evidence and deliberate capability boundaries.
+Version **0.1.0** is prepared for the tested Windows scope below. This inventory
+supersedes historical open-task lists; it separates release acceptance from
+unavailable evidence and deliberate capability boundaries.
 Production installation, a release tag, and gallery publication remain separate
 user decisions. None was performed by this follow-up.
 
@@ -71,8 +70,10 @@ can turn into real-account, real-OS or independent-review evidence.
 
 There is no known failing regression in the recorded supported scope. Broad
 claims of all-agent support, enterprise isolation, unlimited transcript coverage
-or independent certification remain unjustified. Keep `releaseReady=false`
-until native desktop acceptance for the requested macOS/Linux scope is recorded.
-The user confirmed no additional desktops are currently available.
+or independent certification remain unjustified. Windows-only stable preparation
+is authorized; final build, CI and immutable ZIP receipts are in RELEASE_REPORT.md.
+Keep POSIX releaseReady=false and continuation disabled until native desktop
+acceptance is recorded. No additional desktops are currently available; that
+limits those experimental ports without blocking the Windows stable release.
 Do not remove safeguards or enable destructive/sync behavior to make a checklist
 look complete. A production install is not needed to make that decision.

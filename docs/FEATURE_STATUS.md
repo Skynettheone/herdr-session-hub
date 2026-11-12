@@ -1,10 +1,10 @@
 # F01–F16 implementation status — 2026-11-12
 
 “Implemented” below means code and stated tests exist. It does not mean all native
-provider acceptance gates passed. This is **0.1.0-rc.1**, an unpublished candidate.
-The user now requires macOS/Linux ports before readiness. Portable helper,
-key-store, source-lock, installer and package paths exist, with POSIX native
-continuation disabled until desktop acceptance. See PORT_ACCEPTANCE.md.
+provider acceptance gates passed on every OS. Version **0.1.0** is prepared as
+the first Windows x64 stable release. macOS/Linux remain experimental with native
+continuation disabled until desktop acceptance. Their helper/key-store/source-lock
+and installer paths exist. See PORT_ACCEPTANCE.md.
 
 Usage is an additional view in the same History panel: native themed graphs,
 numeric breakdowns, profile/provider/UTC filters, encrypted bounded numeric
@@ -44,15 +44,15 @@ Distinct company identity, other OS/provider builds and additional native agents
 still require external acceptance environments. Conservative ownership checks,
 bounded replay, unavailable deletion/native restore/remote sync and offline
 recorded-only Usage are deliberate guarded limits. No independent human audit or
-publisher signature is claimed. The chosen scope includes macOS/Linux, whose
-native GUI/continuation checks still require unavailable desktops before clearing
-the release gate; production installation
-and publication also need separate approval. Source commits and pushing to the
+publisher signature is claimed. The chosen stable scope is Windows x64 only;
+macOS/Linux stay experimental pending native desktop acceptance. Production
+installation and publication need separate approval. Source commits and pushing to the
 requested origin were explicitly authorized.
 
-`version.json` keeps `releaseReady=false`. `build-release.ps1` refuses normal
-release mode until changed after evidence is recorded. `-AllowUnverified` builds
-only an accurately named release-candidate bundle.
+`version.json` records Windows releaseReady=true and stablePlatforms=[windows-x64].
+`build-release.ps1` prepares the normal Windows stable bundle. The POSIX builder
+always derives experimental version/channel metadata with releaseReady=false;
+the verifier rejects promotion or continuation enablement on those targets.
 
 ## Expanded agent support
 

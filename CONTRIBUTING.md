@@ -30,12 +30,13 @@ Prepare the three exact binary wheels under `.research/wheels/`:
 
 ```powershell
 ./.venv/Scripts/python.exe -m pip download --only-binary=:all: --require-hashes -r requirements-windows.lock --dest .research/wheels
-pwsh -NoProfile -File scripts/build-release.ps1 -AllowUnverified
+pwsh -NoProfile -File scripts/build-release.ps1
 ```
 
-This creates a **candidate install** bundle while `releaseReady=false`.
-The release builder refuses a normal release until gates in FEATURE_STATUS.md
-are closed. It excludes research sources, state, personal runtime config,
+This creates the **0.1.0 Windows x64 stable install** bundle. Stable scope is
+explicitly limited to Windows x64 in version.json. Unverified future Windows
+candidates need a candidate version and `-AllowUnverified`; that flag does not
+promote any platform. The builder excludes research sources, state, personal runtime config,
 environments and transcripts. Windows x64 wheel hashes are not portable to
 other Python/platform combinations. Test other targets before adding lockfiles.
 
@@ -64,7 +65,9 @@ python -I -B scripts/build-port-bundle.py --target linux-x64 --allow-unverified
 python -I -B scripts/build-port-bundle.py --target macos-arm64 --allow-unverified
 ```
 
-No production bundle is emitted by that script while native acceptance is pending.
+The script derives **0.1.0-experimental.1**, channel=experimental and
+releaseReady=false from the Windows stable checkout. No stable POSIX bundle is
+emitted, and continuation remains disabled in both metadata and runtime.
 The shared POSIX fixture suites inject memory-only keys through test code; runtime
 does not have such a switch. `HUB_TEST_NATIVE_VAULT=1` enables the separate real
 OS-key-store test only on a disposable desktop/CI account. It creates Hub-owned

@@ -1,8 +1,9 @@
 # macOS and Linux port checkpoint — 2026-11-12
 
-The user requires both native ports before production readiness. Windows-only
-scope was explicitly declined. Keep `releaseReady=false` until the required
-native acceptance exists; do not equate Herdr OS support with Hub acceptance.
+Current scope: the user approves Windows x64 for the first stable release.
+macOS/Linux remain experimental with releaseReady=false until their native
+desktop acceptance exists; do not equate Herdr OS support with Hub acceptance.
+This supersedes the earlier cross-platform-first requirement.
 
 ## Confirmed boundaries before implementation
 
@@ -46,5 +47,5 @@ arm64 and Ubuntu 24.04 x64 tests passed their actual native key stores, filesyst
 and cooperative source-lock tests; Windows behavior remains covered. Source
 `930928a` passed all three essential jobs and combined CodeQL. Native desktop
 GUI/provider acceptance is still unavailable; continuation stays disabled on
-POSIX and `releaseReady=false`. Intel macOS has no binary wheel for the pinned
+POSIX and its artifact-specific `releaseReady=false`. Intel macOS has no binary wheel for the pinned
 encryption version and is not silently built from source or downgraded.

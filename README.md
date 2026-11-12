@@ -8,7 +8,8 @@
   <a href="https://herdr.dev"><img src="https://img.shields.io/badge/Herdr-0.1.15-30363d" alt="Herdr 0.1.15"></a>
   <a href="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/ci.yml"><img src="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/ci.yml/badge.svg" alt="Platform checks"></a>
   <a href="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/codeql.yml"><img src="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
-  <img src="https://img.shields.io/badge/version-0.1.0--rc.1-8b5cf6" alt="0.1.0-rc.1 candidate">
+  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="0.1.0">
+  <img src="https://img.shields.io/badge/stable-Windows_x64-238636" alt="Stable scope: Windows x64">
 </p>
 <p align="center"><a href="#install">Install</a> · <a href="#history-and-usage">Features</a> · <a href="#compatibility">Compatibility</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
 
@@ -34,9 +35,10 @@ use a verified bundle for your platform. **Copying only `mods/session-hub` is no
 sufficient**: the Python runtime and `runtime.json` must also be configured.
 [Agent installation guide](docs/INSTALL_WITH_AGENT.md) · [Recipe](RECIPE.md)
 
-No release or gallery listing has been published yet. This repository is preparing
-`0.1.0-rc.1`; obtain a verified candidate bundle or build one from source. The
-compatibility limits below remain in force.
+The first stable release, **0.1.0**, is prepared for **Windows 11 x64**. No release
+or gallery listing has been published yet; use a verified bundle or build from
+source. Linux/macOS builds remain separately labeled **0.1.0-experimental.1**,
+with native continuation disabled. [Release notes](docs/RELEASE_NOTES.md)
 
 ### From a verified bundle
 
@@ -50,11 +52,10 @@ pwsh -NoProfile -File scripts/install.ps1 -AppHome "$HOME/.config/herdr-app" -In
 herdr-app do mod.open --name session-hub
 ```
 
-Linux x64 / Apple Silicon macOS candidates:
+Linux x64 / Apple Silicon macOS experimental test bundles:
 
 ```sh
-python3.14 -I -B scripts/install.py install --app-home "$HOME/.config/herdr-app" --install-production
-herdr-app do mod.open --name session-hub
+python3.14 -I -B scripts/install.py install --app-home ../.dev/session-hub-posix-test
 ```
 
 Linux needs `secret-tool` and an unlocked Secret Service; macOS needs an unlocked
@@ -90,9 +91,9 @@ bills; recorded limit snapshots are not live account quotas.
 
 | Platform | Local helper / encrypted state | Native Herdr continuation |
 |---|---|---|
-| Windows 11 x64 | Verified | Verified for the versions below |
-| Linux x64 | Tested on Ubuntu 24.04, including Secret Service | Disabled pending native GUI/context acceptance |
-| Apple Silicon macOS | Tested on macOS 15, including Keychain | Disabled pending native GUI/context acceptance |
+| Windows 11 x64 — stable | Verified | Verified for the versions below |
+| Linux x64 — experimental | Tested on Ubuntu 24.04, including Secret Service | Disabled pending native GUI/context acceptance |
+| Apple Silicon macOS — experimental | Tested on macOS 15, including Keychain | Disabled pending native GUI/context acceptance |
 | Intel macOS / other architectures | No accepted bundle | Unavailable |
 
 Verified Windows CLIs: **Claude Code 2.1.322**, **Codex 0.164.0**, **Pi 1.1.0**,
@@ -102,10 +103,10 @@ Gemini duplicate snapshots fail closed. Copilot history is experimental;
 continuation is unavailable. Other Herdr agents appear in the capability catalog
 without guessed history readers or launch commands.
 
-The macOS/Linux native GUI and continuation checks are still required before the
-requested cross-platform production scope is accepted. Those features remain
-guarded; the candidate label does not imply they have passed. UNC, WSL history
-roots and network mounts are unsupported.
+Stable support is Windows x64 only. Promoting macOS/Linux requires native GUI,
+continuation and updater acceptance on each target; their passing helper/key-store
+tests do not establish desktop support. UNC, WSL history roots and network mounts
+are unsupported.
 
 ## Privacy and safety
 
