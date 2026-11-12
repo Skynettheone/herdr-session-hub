@@ -1,6 +1,77 @@
 # Release preparation report — 2026-11-12
 
-## Current 0.1.0-rc.1 install candidate
+## Current Windows 0.1.0 stable preparation
+
+The user explicitly approves **Windows 11 x64-only stable scope**, superseding
+the earlier cross-platform-first gate. Source policy/tests are at `cd30b9a`,
+with release documentation at `61884d12e9f38836b2cc8b385d535f63830eb003`.
+Windows metadata is version=0.1.0, channel=stable, releaseReady=true and
+stablePlatforms=[windows-x64]. Both POSIX artifacts are version=0.1.0-experimental.1,
+channel=experimental, releaseReady=false and nativeContinuationVerified=false.
+The runtime POSIX continuation guard is unchanged and independently tested.
+
+No native UI, history/Usage parser, encryption or provider-launch implementation
+changed in this preparation (`mods/` matches the preceding accepted source).
+Windows native GUI, five exact provider versions, real-cloud Claude continuation,
+representative themes/forms/Usage and isolated Herdr update/rollback retain their
+recorded acceptance scope. Experimental native desktop tests no longer block
+Windows-only stable readiness, but remain required before promoting those ports.
+
+### Final checks
+
+On exact source `61884d12e9f38836b2cc8b385d535f63830eb003`, the essential
+[three-platform CI](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43209103184)
+and [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43209103202)
+passed. Each target ran **110 Python tests**: Windows **98 passed / 12 platform
+skips**; Linux/macOS each **107 passed / 3 Windows-only skips**. Actual Secret
+Service and Keychain checks passed; Windows also passed Ruff and **17 UI host
+groups**. The subsequent API query returned **zero open code-scanning alerts**.
+
+The normal local Windows build passed without AllowUnverified: 110 tests in
+61.377 seconds, 17 UI groups, Ruff, isolated installed SDK validation, offline
+wheel hashes and stage/fresh-extraction checks. Its 10k list/search sample took
+0.369 seconds. Local private Linux Python 3.14.10 ran 110 tests in 35.977 seconds,
+with four environment/platform skips. Full details are in TEST_RESULTS.md.
+
+The real Windows offline smoke reached checksum-tamper refusal before writes,
+first install, failed-swap rollback with a working old helper, pending-receipt and
+concurrent-lock refusal, separate-runtime upgrade, immutable package, uninstall
+WhatIf and retained state. Its explicit final Hub purge was interrupted after
+starting; cleanup was resumed in that same confined test home. The resumed check
+completed all Hub-owned removals and independently verified the original fixture,
+layout and key bytes plus unchanged source-package integrity. No production
+configuration or real provider history was a test/purge target.
+
+Fresh ZIPs verify every included source/wheel byte, with only generated target
+version metadata differing from source. The Windows packaged helper passed an
+isolated numeric refresh and its extraction remained valid. The first Linux
+packaged smoke timed out during offline pip at 60 seconds; a fresh bounded retry
+at 180 seconds passed startup, matching wheels, missing-Secret-Service refusal,
+no plaintext state and unchanged extraction. The timeout is not counted as a
+pass. macOS archive/source integrity and hosted native key-store checks pass;
+native GUI/package installation acceptance remains experimental and unverified.
+
+### Frozen artifact receipts
+
+These artifacts supersede the earlier candidates. Windows has **59 manifest
+payload files**, experimental ports **57** each, plus their manifest. All have
+external `.zip.sha256` sidecars. The release report is outside the ZIPs so recording
+these receipts does not change artifact hashes.
+
+| Target / channel | Local ZIP | Bytes | SHA-256 |
+|---|---|---:|---|
+| Windows x64 stable | `herdr-session-hub-0.1.0-windows-x64-20261112112444.zip` | 4,407,324 | `bb9bd3e13794165d1fb6d29540f782ff20f00bbe6c8ecf7a2a27f8083c9f2309` |
+| Linux x64 experimental | `herdr-session-hub-0.1.0-experimental.1-linux-x64-20261112112319.zip` | 5,314,316 | `e40d06970bdc46b6e37b15b390ab890d397de7207f9d52e4fcbbbbbbd2655a02` |
+| macOS arm64 experimental | `herdr-session-hub-0.1.0-experimental.1-macos-arm64-20261112112323.zip` | 4,495,592 | `c386e4ff33c8411868e45143969e235419310465409051dc420597b1c6007259` |
+
+`dist/release-0.1.0/` is the curated **Windows-only** publication input directory:
+the exact ZIP/sidecar above, RELEASE_NOTES.md, RELEASE-RECEIPT.json with tested
+source/CI provenance, and SHA256SUMS.txt covering those four files. Copy equality
+and all checksums were verified. Experimental ZIPs remain outside this directory.
+No production installation, git tag, GitHub release or gallery change was made.
+Publication and production installation still require explicit approval.
+
+## Previous 0.1.0-rc.1 install candidate
 
 Public presentation and agent setup are committed at `d6a825e`; the shared
 install-payload policy, builders and regression tests at
@@ -52,7 +123,7 @@ isolated numeric refresh without changing its extracted package.
 | Linux x64 experimental | `herdr-session-hub-0.1.0-rc.1-linux-x64-20261112110815.zip` | 5,310,129 | `974df20fb564454c5a9e5244e589dbf39a755af725ad4195b78f77a52f865ab9` |
 | macOS arm64 experimental | `herdr-session-hub-0.1.0-rc.1-macos-arm64-20261112110820.zip` | 4,491,397 | `b6a9dadc39f00ba4f2224210f0d39f6e18960a806aa21ba97e98f12ed050c371` |
 
-## Current native-port development candidate
+## Earlier native-port development candidate
 
 The user requires macOS/Linux ports before production readiness and confirmed
 no additional desktops are available. Windows-only production scope was not

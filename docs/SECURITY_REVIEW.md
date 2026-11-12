@@ -1,5 +1,31 @@
 # Implementation security review — 2026-11-12
 
+## Windows stable scope assessment
+
+The user authorizes Windows x64-only stable preparation. Reviewed the changes at
+`cd30b9a` and documentation snapshot `61884d1`: source readiness is explicitly
+limited to Windows, while the builder derives separate experimental POSIX
+version/channel/readiness metadata. The verifier rejects mismatched channels,
+non-boolean readiness, expanded stable scope or enabled POSIX continuation even
+when a manifest is regenerated. Three new regression groups cover these boundaries.
+
+No native UI, provider reader/accounting/launcher, process ownership, encryption
+or credential-handling implementation changed. In particular,
+native_continuation_verified() still returns false on POSIX independently of
+package metadata. Existing source-only/package allowlists, link/private-state
+refusals and target wheel hashes remain enforced. No new security finding was
+identified in this release-policy review. Prior findings/fixes and known
+boundaries remain below; stable Windows naming does not claim an independent
+human audit, publisher signature or distinct company-identity verification.
+
+Final source `61884d1` passed CodeQL; the post-scan API query returned zero open
+alerts. All three native platform suites passed the new metadata regressions.
+Fresh archives and Windows-only release-input copies match their checksums;
+experimental packages are excluded from the stable upload directory. The
+interrupted test-only final purge was resumed with path confinement, independent
+synthetic sentinel hashes and source-package verification. No additional access
+to production data or provider credentials was required.
+
 ## Candidate install-payload review
 
 Reviewed the shared payload builder and platform verifier at `1b90fa4`. Install

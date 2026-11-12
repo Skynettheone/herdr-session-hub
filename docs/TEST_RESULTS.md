@@ -1,5 +1,36 @@
 # Test results — 2026-11-12
 
+## Windows 0.1.0 stable preparation
+
+The user approves Windows x64-only stable scope. Source policy and tests are
+committed at `cd30b9a`, with release documentation at
+`61884d12e9f38836b2cc8b385d535f63830eb003`. Three new package regressions prove
+that stable source derives only experimental POSIX artifacts, regenerated
+manifests cannot promote a port/enable continuation, and source readiness cannot
+silently expand stable scope. Runtime/native provider and UI code is unchanged.
+
+The normal local Windows build, without AllowUnverified, passed **110 Python
+tests in 61.377 seconds** (98 passed, 12 platform skips), **17 UI host groups**,
+Ruff, the isolated installed Herdr SDK check, offline wheel hashes and staged/
+fresh ZIP verification. The 10k list/search sample took 0.369 seconds. Private
+Linux Python 3.14.10 ran **110 tests in 35.977 seconds** (106 passed, three
+Windows-only plus one unavailable local native key-store check skipped).
+
+Final hosted CI, disposable installer checks and immutable release/experimental
+artifact receipts are in [RELEASE_REPORT.md](RELEASE_REPORT.md). Windows native
+acceptance evidence remains valid for its recorded exact versions; experimental
+macOS/Linux still require native GUI/context/updater acceptance before promotion.
+
+Final hosted source `61884d1` passed all three jobs: 110 tests each, Windows
+98 passed / 12 platform skips, Linux/macOS each 107 passed / 3 Windows-only skips.
+Native Secret Service/Keychain checks and Windows Ruff/17 UI groups passed;
+CodeQL passed with zero open alerts returned afterward. Real Windows installer
+checks passed through default state retention; its interrupted final explicit
+purge was resumed and independently verified against fixed original/layout/key
+fixture hashes and package integrity. The first Linux package smoke's 60-second
+offline-pip timeout was not counted as a pass; the fresh 180-second retry passed
+packaged helper startup, missing-vault refusal/no plaintext and extraction integrity.
+
 ## Release-candidate payload checkpoint
 
 Source `1b90fa48106e733923c1b4a86eadb425ef7b9adb` adds the install-only
@@ -19,7 +50,7 @@ The documentation/payload changes do not change native UI, accounting or provide
 launcher implementation; existing GUI/Usage/continuation evidence retains its
 recorded scope. No extra macOS/Linux desktop acceptance is inferred.
 
-## Current platform-port checkpoint
+## Earlier platform-port checkpoint
 
 On exact source `4b32d18e15d8d3858a37060ccb8fec4eaf35d0ae`, the essential
 [platform matrix](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43202496160)
