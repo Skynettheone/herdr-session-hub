@@ -123,3 +123,16 @@ reader here. Other Herdr/custom agents show specific unavailable-history status.
 The official sheep SVG comes from the user-requested Herdr TUI repository only
 as artwork. The extension continues to use the native desktop GUI SDK. License
 and pinned source are retained in THIRD_PARTY_NOTICES.md.
+
+## Usage research checkpoint — 2026-11-12
+
+Before Usage implementation, current T3 source was studied at MIT commit
+`3c6864235487147fd5667786152f400a75251fca`. Exact links, accounting semantics,
+installed versions and verification gates are in [USAGE_DESIGN.md](USAGE_DESIGN.md).
+Confirmed: native SDK path drawing; local token channels for Claude, Codex, Pi,
+OpenCode and Gemini; Codex cumulative snapshots require deduplication. Unknown
+prices are not zero. Copilot usage events are ephemeral; ordinary history does
+not establish usage. Live cloud quotas would require credential/network access
+outside this extension's boundary; only recorded local snapshots are feasible.
+The new additive numeric cache stays inside encrypted Hub state and does not
+turn on conversation indexing. No upstream accounting implementation was copied.

@@ -1088,8 +1088,188 @@ def probe():
             "platform": sys.platform, "schema": SCHEMA}
 
 
+def usage_sources(store, req):
+    """Reauthorize every cached hit against current profile scope, not FTS opt-in."""
+    profiles = {p["id"]: p for p in store.get("profiles", [])}
+    for row in store.get("records", [])[:MAX_FILES]:
+        if req.get("provider", "all") not in ("all", row["provider"]):
+            continue
+        targets = []
+        for target in row["targets"]:
+            p = profiles.get(target, {})
+            if (req.get("profile") and target != req["profile"] or not p.get("enabled")
+                    or p.get("provider") != row["provider"]):
+                continue
+            path = Path(row["sourcePath"])
+            if (any(path.is_relative_to(Path(r)) for r in p.get("roots", []))
+                    and not any(path.is_relative_to(Path(e)) for e in p.get("excluded", []))):
+                targets.append(target)
+        if targets:
+            yield row
+
+
+def usage_guard(path, offset):
+    if path.suffix == ".zst":
+        # No compressed seeking. Any changed compressed generation is replayed.
+        return None
+    with path.open("rb") as stream:
+        head = stream.read(min(offset, 256))
+        stream.seek(max(0, offset - 256))
+        tail = stream.read(min(offset, 256))
+    return hashlib.sha256(head + tail).hexdigest()
+
+
+def usage_database(row, cache):
+    path = source_file(row["sourcePath"], row["root"])
+    db, before = opencode_snapshot(path, row["root"])
+    cursor = cache.get("cursor", [-1, ""])
+    rows, malformed = [], 0
+    try:
+        deadline = time.monotonic() + 3
+        db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+        db.execute("PRAGMA query_only=ON")
+        raw = db.execute('''SELECT time_created,id,substr(data,1,1048577) FROM message
+            WHERE session_id=? AND (time_created>? OR (time_created=? AND id>?))
+            ORDER BY time_created,id LIMIT 256''', (row["nativeId"], cursor[0], cursor[0], cursor[1])).fetchall()
+        for at, identity, data in raw:
+            cursor = [at, identity]
+            try:
+                if len(data) > LINE:
+                    raise ValueError("Oversized accounting record")
+                value = json.loads(data)
+                if not isinstance(value, dict):
+                    raise ValueError("Invalid accounting record")
+                rows.append({**value, "id": identity, "time_created": at})
+            except (ValueError, TypeError, RecursionError):
+                malformed += 1
+    finally:
+        db.close()
+    if opencode_fingerprint(path, row["root"]) != before:
+        raise HubError("OpenCode changed during usage read; retry when it is idle")
+    return rows, cursor, len(raw) == 256, malformed, before
+
+
+def usage_scan(store, row, cache, event_budget):
+    """Commit a bounded numeric-only batch; never write to the source."""
+    parser = _adapters.usage
+    path = source_file(row["sourcePath"], row["root"])
+    stamp = opencode_fingerprint(path, row["root"]) if row["sourceKind"] == "database" else file_stamp(path)
+    old_stamp = cache.get("stamp", [])
+    if row["sourceKind"] == "database":
+        if old_stamp != stamp:
+            cache = {}
+        rows, cursor, pending, bad, stamp = usage_database(row, cache)
+        offset, skip, big, waiting = 0, False, 0, False
+    else:
+        offset = cache.get("offset", 0)
+        append = (row["provider"] != "gemini" and path.suffix != ".zst" and old_stamp
+                  and old_stamp[:2] == stamp[:2] and old_stamp[4] == stamp[4] and stamp[2] >= old_stamp[2]
+                  and cache.get("guard") == usage_guard(path, offset))
+        if cache.get("version") != parser.VERSION or old_stamp != stamp and not append:
+            cache, offset = {}, 0
+        data, rows, consumed, skip, bad, big, eof = source_records(row["provider"], path, offset, cache.get("skip", False))
+        offset += consumed
+        pending = not eof and consumed > 0
+        waiting = not pending and (not eof or consumed != len(data))
+        cursor = None
+        if file_stamp(path) != stamp:
+            raise HubError("History changed during usage read; retry shortly")
+    events, state, warnings, limits = parser.parse(row["provider"], rows, cache.get("state"))
+    merged = parser.merge_events(cache.get("events", []) + events)
+    cap = min(50000, len(cache.get("events", [])) + event_budget)
+    limited = len(merged) > cap
+    if limited:
+        merged = merged[:cap]
+        warnings["numeric cache event budget reached"] = 1
+        pending = False
+    warnings["malformed records"] = bad
+    warnings["oversized records"] = big
+    if waiting:
+        warnings["incomplete tail or replay budget"] = 1
+    prior = {k: v for k, v in cache.get("warnings", {}).items() if k != "incomplete tail or replay budget"}
+    for code, count in warnings.items():
+        if count:
+            prior[code] = prior.get(code, 0) + count
+    return dict(version=parser.VERSION, stamp=stamp, offset=offset, cursor=cursor, skip=skip, pending=pending,
+                state=state, events=merged, warnings=prior, limits=(cache.get("limits", []) + limits)[-4:],
+                guard=usage_guard(path, offset) if row["sourceKind"] != "database" else None,
+                at=dt.datetime.now(dt.timezone.utc).isoformat(), limited=limited)
+
+
+def usage_rpc(store, req):
+    parser = _adapters.usage
+    try:
+        parser.period(req)
+    except (ValueError, TypeError):
+        raise HubError("Choose a valid usage period; custom dates use YYYY-MM-DD, at most 366 days") from None
+    rates = store.get("usage:rates", {})
+    if req["action"] == "usage-price":
+        provider, model, rate = req.get("rateProvider"), req.get("rateModel"), req.get("rate")
+        if provider not in PROVIDERS or parser.identifier(model) != model or model == "unknown":
+            raise HubError("Choose a provider and an exact model identifier")
+        name = provider + ":" + model
+        if rate is None:
+            rates.pop(name, None)
+        else:
+            if (not isinstance(rate, dict) or set(rate) != set(parser.CHANNELS)
+                    or any(type(v) not in (int, float) or not 0 <= v <= 1000000 for v in rate.values())):
+                raise HubError("Enter all four USD rates per million tokens, between 0 and 1000000")
+            rates[name] = rate
+            if len(rates) > 200:
+                raise HubError("Maximum 200 local model rates")
+        store.set("usage:rates", rates)
+    if req["action"] == "usage-clear":
+        store.db.execute("DELETE FROM kv WHERE k LIKE 'usage:file:%'")
+        store.dirty, store.purge_backup = True, True
+        store.set("usage:lastRefresh", None)
+    sources = list(usage_sources(store, req))
+    all_events, coverage, limits, pending = [], {}, [], 0
+    advanced, count, deadline = 0, 0, time.monotonic() + 4
+    budget = parser.MAX_EVENTS - sum(len(json.loads(v).get("events", [])) for (v,) in store.db.execute("SELECT v FROM kv WHERE k LIKE 'usage:file:%'"))
+    for row in sources:
+        cachekey = "usage:file:" + row["canonicalSourceIdentity"]
+        cache = store.get(cachekey, {})
+        if row["provider"] == "copilot":
+            coverage["Copilot usage is not persisted by the native CLI"] = coverage.get("Copilot usage is not persisted by the native CLI", 0) + 1
+            continue
+        try:
+            path = source_file(row["sourcePath"], row["root"])
+            stamp = opencode_fingerprint(path, row["root"]) if row["sourceKind"] == "database" else file_stamp(path)
+            needs = cache.get("version") != parser.VERSION or cache.get("stamp") != stamp or cache.get("pending")
+            if needs and req["action"] == "usage-refresh" and count < 8 and time.monotonic() < deadline:
+                count += 1
+                before_count = len(cache.get("events", []))
+                cache = usage_scan(store, row, cache, max(0, budget))
+                budget -= len(cache["events"]) - before_count
+                store.set(cachekey, cache)
+                advanced += 1
+                needs = cache["pending"]
+            if needs:
+                pending += 1
+            if row.get("stale"):
+                coverage["history discovery is incomplete or stale"] = coverage.get("history discovery is incomplete or stale", 0) + 1
+            for code, n in cache.get("warnings", {}).items():
+                coverage[code] = coverage.get(code, 0) + n
+            for item in cache.get("events", []):
+                all_events.append({**item, "session": digest([row["provider"], row["nativeId"]]),
+                                   "project": redact(clean(Path(row.get("cwd") or "Unknown project").name, 120))})
+            for limit in cache.get("limits", []):
+                limits.append({**limit, "provider": row["provider"], "profiles": row["targets"]})
+        except (HubError, OSError, ValueError, TypeError, sqlite3.Error, zstd.ZstdError):
+            coverage["source unavailable or changed during read"] = coverage.get("source unavailable or changed during read", 0) + 1
+    if req["action"] == "usage-refresh":
+        store.set("usage:lastRefresh", dt.datetime.now(dt.timezone.utc).isoformat())
+    summary = parser.aggregate(all_events, req, rates)
+    summary.update(coverage=coverage, pending=pending, sources=len(sources), advanced=advanced,
+                   limits=sorted(limits, key=lambda x: x["at"], reverse=True)[:8], rates=rates,
+                   lastRefresh=store.get("usage:lastRefresh"), scope="Configured local history; archived/hidden sessions included. No subagent directory scan.")
+    return summary
+
+
 def rpc(store, req):
     action = req.get("action")
+    if action in ("usage", "usage-refresh", "usage-price", "usage-clear"):
+        return usage_rpc(store, req)
     if action == "list":
         return list_records(store, req)
     if action == "probe":
