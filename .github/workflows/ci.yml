@@ -2,9 +2,9 @@ name: Platform tests
 on:
   push:
     branches: [main]
-    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'ruff.toml', '.github/workflows/ci.yml']
+    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'version.json', 'ruff.toml', '.github/workflows/ci.yml']
   pull_request:
-    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'ruff.toml', '.github/workflows/ci.yml']
+    paths: ['mods/**', 'tests/**', 'scripts/**', 'requirements*.lock', 'version.json', 'ruff.toml', '.github/workflows/ci.yml']
   workflow_dispatch:
 concurrency:
   group: platforms-${{ github.workflow }}-${{ github.ref }}

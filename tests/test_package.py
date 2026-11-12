@@ -106,11 +106,21 @@ class PackageTests(unittest.TestCase):
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"synthetic Linux payload")
+        for name in package.REQUIRED - package.target_files("linux-x64"):
+            (self.root / name).unlink()
         self.manifest()
-        self.assertGreater(package.verify(self.root), len(package.REQUIRED))
+        self.assertEqual(package.verify(self.root), len(package.target_files("linux-x64")))
         (self.root / "version.json").write_text(json.dumps(dict(platform="unverified-os")))
         self.manifest()
         with self.assertRaisesRegex(ValueError, "Unsupported"):
+            package.verify(self.root)
+
+    def test_install_payload_rejects_development_files_even_when_manifested(self):
+        source = self.root / "tests/test_synthetic.py"
+        source.parent.mkdir()
+        source.write_text("synthetic source test, not part of an install payload")
+        self.manifest()
+        with self.assertRaisesRegex(ValueError, "Unexpected"):
             package.verify(self.root)
 
 

@@ -30,13 +30,21 @@ WHEELS = {
 }
 LOCKFILES = {"windows-x64": "requirements-windows.lock", "linux-x64": "requirements-linux-x64.lock", "macos-arm64": "requirements-macos-arm64.lock"}
 CORE_REQUIRED = REQUIRED - {"requirements-windows.lock", *("wheelhouse/" + name for name in WHEELS["windows-x64"])}
+CORE_REQUIRED = (CORE_REQUIRED - {"scripts/install.ps1", "scripts/uninstall.ps1", "scripts/check-native.ps1"}) | {
+    "RECIPE.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "preview.png", "docs/USER_GUIDE.md",
+    "docs/INSTALL_WITH_AGENT.md", "docs/screenshots/usage-community.png",
+}
+INSTALLERS = {"windows-x64": {"scripts/install.ps1", "scripts/uninstall.ps1", "scripts/check-native.ps1"},
+              "linux-x64": {"scripts/install.py"}, "macos-arm64": {"scripts/install.py"}}
 
 
 def target_files(target):
     if not isinstance(target, str) or target not in WHEELS:
         raise ValueError("Unsupported package platform")
-    required = CORE_REQUIRED | {LOCKFILES[target], *("wheelhouse/" + name for name in WHEELS[target])}
-    return required if target == "windows-x64" else required | {"scripts/install.py"}
+    return CORE_REQUIRED | INSTALLERS[target] | {LOCKFILES[target], *("wheelhouse/" + name for name in WHEELS[target])}
+
+
+REQUIRED = target_files("windows-x64")
 
 
 def regular(path, directory=False):
@@ -81,6 +89,7 @@ def verify(root):
     config = json.loads(version_path.read_text(encoding="utf-8"))
     if not isinstance(config, dict) or not target_files(config.get("platform")).issubset(expected):
         raise ValueError("Incomplete package for its declared platform")
+    allowed = target_files(config["platform"])
     actual, total = set(), 0
     for folder, directories, files in os.walk(root, followlinks=False):
         for name in directories:
@@ -98,7 +107,7 @@ def verify(root):
             total += info.st_size
             if total > MAX_BYTES or len(actual) >= MAX_FILES:
                 raise ValueError("Package size budget exceeded")
-            if relative not in expected:
+            if relative not in expected or relative not in allowed:
                 raise ValueError("Unexpected package file")
             digest = hashlib.sha256()
             with path.open("rb") as stream:
