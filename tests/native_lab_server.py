@@ -65,7 +65,14 @@ class Handler(BaseHTTPRequestHandler):
                                   "historyLoaded": history_loaded, "messages": len(messages), "at": time.time()}) + "\n")
         model = request.get("model", "hub-local")
         identifier = uuid.uuid4().hex
-        if "messages" in self.path and "chat/completions" not in self.path:
+        google = "generatecontent" in self.path.lower()
+        if google:
+            result = {"candidates": [{"content": {"role": "model", "parts": [{"text": text}]},
+                                      "finishReason": "STOP", "index": 0}],
+                      "usageMetadata": {"promptTokenCount": 20, "candidatesTokenCount": 10, "totalTokenCount": 30},
+                      "modelVersion": "gemini-2.5-flash"}
+            events = [(None, result)]
+        elif "messages" in self.path and "chat/completions" not in self.path:
             result = {"id": "msg_" + identifier, "type": "message", "role": "assistant", "model": model,
                       "content": [{"type": "text", "text": text}], "stop_reason": "end_turn",
                       "stop_sequence": None, "usage": {"input_tokens": 20, "output_tokens": 10}}
@@ -96,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
                       "usage": {"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30}}
             events = [(None, {**result, "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"role": "assistant", "content": text}, "finish_reason": None}]}),
                       (None, {**result, "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})]
-        if not request.get("stream"):
+        if not request.get("stream") and not (google and "streamGenerateContent" in self.path):
             self.reply(result)
             return
         self.send_response(200)
@@ -107,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
             for name, data in events:
                 prefix = "event: " + name + "\n" if name else ""
                 self.wfile.write((prefix + "data: " + json.dumps(data) + "\n\n").encode())
-            if events[0][0] is None:
+            if events[0][0] is None and not google:
                 self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):

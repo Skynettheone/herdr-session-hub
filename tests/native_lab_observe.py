@@ -8,7 +8,7 @@ import time
 import herdr_update_lab as lab
 
 parser = argparse.ArgumentParser()
-parser.add_argument("provider", choices=("claude", "codex", "pi", "opencode"))
+parser.add_argument("provider", choices=("claude", "codex", "pi", "opencode", "gemini"))
 parser.add_argument("terminal")
 args = parser.parse_args()
 spec = importlib.util.spec_from_file_location("hub", lab.REPO / "mods/session-hub/helper/hub.py")
@@ -25,7 +25,8 @@ with hub.Store(lab.HOME / "data/session-hub") as store:
     row = next(r for r in store.get("records") if r["provider"] == args.provider)
     profile = next(p for p in store.get("profiles") if p["id"] in row["targets"])
     terminal = core("get", args.terminal, "--json")
-    if "Native acceptance workspace / Native " not in terminal.get("labels", {}).get("where", ""):
+    workspace = terminal.get("labels", {}).get("where", "").split(" / ", 1)[0]
+    if workspace not in {"Native acceptance workspace", "Follow-up acceptance"}:
         raise SystemExit("Refusing a terminal outside the named disposable workspace")
     screen = core("read", args.terminal, "--json")
     active = (hub.codex_writer_owned(profile, row["nativeId"]) if args.provider == "codex"
