@@ -204,7 +204,7 @@ class HubTests(unittest.TestCase):
                 self.assertTrue(hub.rpc(store, {"action":"verify-version","profile":profile["id"]})["verified"])
             hub.rpc(store, {"action":"trust-project","key":row["key"],"profile":profile["id"],"confirmation":str(self.cwd)})
             spec = hub.resume_spec(store, row["key"], profile["id"], lambda _:False)
-            self.assertEqual(spec["argv"], [sys.executable, "--resume", ID])
+            self.assertEqual(spec["argv"], [str(Path(sys.executable).resolve()), "--resume", ID])
 
     @unittest.skipUnless(os.name == "nt", "Windows mandatory sharing; POSIX SQLite locks tested across processes")
     def test_snapshot_refuses_open_writers_and_prevents_checkpoint_races(self):
@@ -588,7 +588,7 @@ class HubTests(unittest.TestCase):
                 store.set("profiles", profiles)
                 command = hub.resume_spec(store, row["key"], p["id"], lambda _: False)
                 suffix = ["--resume", ID] if provider == "claude" else ["--no-daemon", "resume", ID] if provider == "codex" else ["--session", str(path)]
-                self.assertEqual(command["argv"], [p["executable"], *suffix])
+                self.assertEqual(command["argv"], [str(Path(p["executable"]).resolve()), *suffix])
                 self.assertEqual(command["cwd"], str(self.cwd))
                 for active in (True, None):
                     with self.assertRaises(hub.HubError):
