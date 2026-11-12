@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 $targetHome=[IO.Path]::GetFullPath($AppHome)
 if (-not (Test-Path -LiteralPath $targetHome -PathType Container)) { throw 'App home is missing' }
 $names=@('mods/session-hub')
-if ($PurgeHubData) { $names += @('data/session-hub','data/session-hub-runtime','data/session-hub-mod-backups') }
+if ($PurgeHubData) { $names += @('data/session-hub','data/session-hub-runtime','data/session-hub-mod-backups','data/session-hub-install') }
 foreach($name in $names) {
     $target=[IO.Path]::GetFullPath((Join-Path $targetHome $name))
     if (-not $target.StartsWith(($targetHome+[IO.Path]::DirectorySeparatorChar),[StringComparison]::OrdinalIgnoreCase)) { throw 'Target escaped selected app home' }

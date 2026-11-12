@@ -39,6 +39,15 @@ are closed. It excludes research sources, state, personal runtime config,
 environments and transcripts. Windows x64 wheel hashes are not portable to
 other Python/platform combinations. Test other targets before adding lockfiles.
 
+The builder verifies staging and a fresh ZIP extraction. Install only from the
+verified extracted bundle; the source checkout has no release manifest/wheelhouse.
+For a disposable installation, choose an app home below the **bundle parent's**
+`.dev` directory (for example `../.dev/session-hub-test`). Keep the bundle itself
+unchanged so repeated verification succeeds. `tests/install-smoke.ps1` creates
+its own disposable package and home, tests tamper refusal and upgrade rollback,
+and never selects production. Installer SDK checks use the new runtime's own
+scratch home. Power-loss recovery is documented in USER_GUIDE.md.
+
 Add fixtures for provider schema changes and re-probe native CLI help. Keep
 discovery and migration separate. Preserve argument arrays and source-read-only
 tests. Never replace unknown capability with invented success. Pane was studied

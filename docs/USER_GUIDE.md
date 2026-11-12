@@ -14,6 +14,10 @@ is available. Gemini native continuation passed with a loopback model fixture.
 
 Python 3.14 x64, Herdr 0.1.15 and the provider CLIs must be installed separately.
 The offline development bundle contains pinned Windows encryption wheels.
+Use a fresh extracted bundle. Installation validates every manifest entry and
+requires all runtime files and wheels before writing the app home. Comparing the
+ZIP hash with a trusted release receipt establishes integrity; a hash inside an
+untrusted download does not establish publisher identity.
 After approving a production installation, close Herdr and run from the bundle:
 
 ```powershell
@@ -180,7 +184,10 @@ encrypted file exchange, not continuous sync or native migration.
 ## Upgrade, rollback and uninstall
 
 Close Herdr before replacing the mod. Installer upgrades keep the previous mod
-under `data/session-hub-mod-backups/`; Hub state is separate. Before any upgrade,
+under `data/session-hub-mod-backups/`; each install has a separate runtime under
+`data/session-hub-runtime/`, so code rollback also retains its original Python
+environment. An exclusive installer lock prevents concurrent upgrades. Ordinary
+final-swap failures restore the previous mod automatically. Hub state is separate. Before any upgrade,
 copy `data/session-hub` to an approved local backup. Local DPAPI state is bound to
 your Windows identity; use portable encrypted metadata for another machine.
 
@@ -191,6 +198,22 @@ it validates the backup and keeps damaged evidence under a new `.hub` name. Do n
 recover while another helper is active. To roll back code, restore the prior mod
 folder and matching runtime; restore matching state from your approved backup if
 the previous version cannot read the current schema.
+
+If Windows/process power loss interrupts the final directory swap, the installer
+retains `data/session-hub-install/pending.json` and refuses another install. Close
+Herdr and stop all installers. Inspect that receipt locally: all paths must be
+inside your selected app home, the backup must be a direct child of
+`data/session-hub-mod-backups`, and the destination must be `mods/session-hub`.
+Do not execute commands taken from an untrusted receipt. If the destination is
+missing and the recorded backup exists, move that backup back to
+`mods/session-hub`; its runtime reference remains valid. If the destination
+already exists, preserve both directories and validate the current mod/helper
+before choosing whether to keep it or restore the backup. Retain a copy of the
+receipt, then remove only `pending.json` after recovery. An interrupted first
+installation has no prior backup: preserve its stage/receipt and retry from the
+verified bundle after removing the pending receipt. No recovery step requires
+changing provider histories, layouts or keys. Failed staging directories can be
+retained for diagnosis; they are not selected as the active mod.
 
 Actual Herdr 0.1.14→0.1.15 update and backup rollback were tested only in a
 disposable installation (NATIVE_ACCEPTANCE.md). Back up the complete app binaries
