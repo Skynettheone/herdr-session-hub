@@ -258,3 +258,51 @@ Organize → Use original name clears only the Hub alias. Agent names appear onc
 a single profile named after its agent is omitted as redundant. Distinct profile
 labels remain visible. Multiple profiles always remain selectable, with IDs added
 when their labels would otherwise look identical.
+
+## Recorded usage
+
+Choose **Usage** next to **History** in the existing panel. Each view retains its
+own filters. Use Refresh to discover histories and read their numeric accounting;
+this does not enable conversation text search. Stop preserves completed batches.
+No provider account or credential file is read, and no network request is made.
+
+Choose a profile/provider and 24 hours, 7/30/90 days or Custom. Custom dates use
+`YYYY-MM-DD`, include both selected dates, and cover at most 366 days. All chart
+buckets and displayed ranges are **UTC**. Rolling day ranges can contain partial
+first/last UTC days. Model Filter narrows the dashboard; Show all models clears it.
+Model, Day/hour and Project breakdowns provide numeric alternatives to graphs.
+
+Processed tokens sum uncached input, output, cache reads and cache writes.
+Reasoning is included once in output. Cache hit rate is cache reads divided by
+uncached input plus cache reads; no denominator means unavailable. Per-session
+averages use recorded events, not human prompts, and include processed cache-read
+tokens. Trim 10% removes that fraction from each end of sessions ranked by tokens;
+small samples may trim none. Hidden/archived sessions with recorded usage count.
+
+**Est. cost** is known API-equivalent USD cost, not subscription billing. Positive
+provider-reported USD costs are used where available. Model rates lets you enter
+all four exact per-million channel rates locally; those override reported costs
+for that exact provider/model. Pi/OpenCode use `backend/model`, preserving the
+upstream provider. `unknown/model` means its backend was not recorded. Legacy
+model-only rates are retained for manual review but do not match these qualified
+models. Enter zero only for a known free channel. Unknown prices stay unavailable;
+partially priced totals show their event coverage. Cache savings require local
+input/cache-read rates and do not estimate subscription savings.
+
+**Limits** shows timestamped Codex snapshots only when they exist in local
+history, separated by local profile/store. They can be old and do not establish
+live account quotas. Other providers' live limits are unavailable. Copilot's
+ordinary persisted history omits usage events, so its usage is unavailable.
+
+Coverage & privacy lists incomplete discovery, malformed/oversized records,
+budget limits, unknown backends and unsupported formats. Ambiguous Codex fork
+inheritance and unattributed cumulative gaps are not reconstructed. Separate
+local stores remain separate; explicitly shared physical histories count once.
+Separate company cloud identities have not been verified with this user's account.
+
+Copy aggregate report copies only range/totals/coverage JSON, without transcripts,
+paths or profile labels. Numeric counters/model identifiers are cached inside
+Hub's encrypted local state and excluded from portable metadata bundles. Clear
+numeric usage cache removes only those counters and retains your local rates;
+Refresh then rebuilds from available histories. This is also the full re-read
+path after unusual third-party edits to the middle of a growing transcript.

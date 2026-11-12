@@ -12,7 +12,7 @@ import math
 import re
 
 CHANNELS = ("input", "output", "cacheRead", "cacheWrite")
-VERSION = 2
+VERSION = 3
 MAX_EVENTS = 200000
 UTC = dt.timezone.utc
 
@@ -22,14 +22,36 @@ def obj(value):
 
 
 def number(value, maximum=10**12):
-    return (value if type(value) in (int, float) and math.isfinite(value)
-            and 0 <= value <= maximum and value == int(value) else None)
+    return (value if type(value) in (int, float) and 0 <= value <= maximum
+            and math.isfinite(value) and value == int(value) else None)
 
 
 def identifier(value):
     # No control/bidi sequences, free text, paths, query parameters or secret blobs.
     return value if (isinstance(value, str) and not value.lower().startswith(("sk-", "ghp_", "github_pat_", "bearer"))
-                     and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,119}", value)) else "unknown"
+                     and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,239}", value)) else "unknown"
+
+
+def qualified_model(backend, model):
+    return identifier(backend) + "/" + identifier(model)
+
+
+def gemini_billing_records(rows):
+    """Retain billed journal entries across conversation rewind/removal.
+
+    Gemini's token recorder appends the complete message again when counters
+    arrive. Stable IDs/timestamps deduplicate these updates. Content patches and
+    active-conversation ordering never undo recorded inference work.
+    """
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        value = obj(row.get("$set", row))
+        messages = value.get("messages")
+        if isinstance(messages, list):
+            yield from messages
+        elif row.get("type") == "gemini":
+            yield row
 
 
 def instant(value):
@@ -38,7 +60,7 @@ def instant(value):
             parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
             if parsed.tzinfo:
                 return parsed.astimezone(UTC).isoformat()
-        if type(value) in (int, float) and math.isfinite(value) and 946684800000 <= value <= 4102444800000:
+        if type(value) in (int, float) and 946684800000 <= value <= 4102444800000 and math.isfinite(value):
             return dt.datetime.fromtimestamp(value / 1000, UTC).isoformat()
     except (ValueError, OverflowError, OSError):
         pass
@@ -54,7 +76,7 @@ def event(provider, identity, at, model, channels, cost=None):
     values = [number(n) for n in channels]
     if not at or not identity or len(values) != 4 or any(n is None for n in values) or not sum(values):
         return None
-    usd = cost if type(cost) in (int, float) and math.isfinite(cost) and 0 < cost <= 10**9 else None
+    usd = cost if type(cost) in (int, float) and 0 < cost <= 10**9 and math.isfinite(cost) else None
     return dict(id=key([provider, identity]), provider=provider, model=identifier(model), at=at,
                 **dict(zip(CHANNELS, values)), reportedCost=usd)
 
@@ -79,6 +101,8 @@ def codex_counts(value):
 def parse(provider, rows, state=None):
     """Return events, bounded resumable parser state, accounting warning counts."""
     state = dict(state or {})
+    if provider == "gemini":
+        rows = gemini_billing_records(rows)
     events, warnings, limits = [], {}, []
 
     def warn(code):
@@ -114,8 +138,10 @@ def parse(provider, rows, state=None):
             if not x.get("id"):
                 warn("missing billed message identity")
                 continue
-            add(event(provider, [x["id"], x.get("timestamp"), m.get("responseModel", m.get("model", x.get("model")))],
-                      x.get("timestamp"), m.get("responseModel", m.get("model", x.get("model"))),
+            model = qualified_model(m.get("provider", x.get("provider")), m.get("responseModel", m.get("model", x.get("model"))))
+            if model.startswith("unknown/"):
+                warn("upstream model provider is unavailable")
+            add(event(provider, [x["id"], x.get("timestamp"), model], x.get("timestamp"), model,
                       counts(u, ("input", "output", "cacheRead", "cacheWrite")), obj(u.get("cost")).get("total")))
         elif provider == "opencode" and x.get("role") == "assistant" and isinstance(x.get("tokens"), dict):
             u = x["tokens"]
@@ -123,7 +149,9 @@ def parse(provider, rows, state=None):
             if not x.get("id") or out is None or reasoning is None:
                 warn("invalid usage or identity")
                 continue
-            model = obj(x.get("model")).get("id", x.get("modelID"))
+            model = qualified_model(obj(x.get("model")).get("providerID", x.get("providerID")), obj(x.get("model")).get("id", x.get("modelID")))
+            if model.startswith("unknown/"):
+                warn("upstream model provider is unavailable")
             add(event(provider, x["id"], obj(x.get("time")).get("created", x.get("time_created")), model,
                       [u.get("input", 0), out + reasoning, obj(u.get("cache")).get("read", 0), obj(u.get("cache")).get("write", 0)], x.get("cost")))
         elif provider == "gemini" and kind == "gemini" and isinstance(x.get("tokens"), dict):
@@ -152,7 +180,7 @@ def parse(provider, rows, state=None):
                 for name in ("primary", "secondary"):
                     window = obj(rate.get(name))
                     used, minutes, reset = window.get("used_percent"), window.get("window_minutes"), window.get("resets_at")
-                    if (at and type(used) in (int, float) and math.isfinite(used) and 0 <= used <= 100
+                    if (at and type(used) in (int, float) and 0 <= used <= 100 and math.isfinite(used)
                             and number(minutes, 525600) and type(reset) in (int, float) and 946684800 <= reset <= 4102444800):
                         limits.append(dict(window=name, used=used, minutes=minutes, resetsAt=dt.datetime.fromtimestamp(reset, UTC).isoformat(), at=at))
                 info = obj(p.get("info"))

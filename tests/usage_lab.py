@@ -192,7 +192,7 @@ def verify_accounting():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action",choices=("prepare","sync","start","status","commands","wide","narrow","light","community","stop","verify","verify-accounting","shot"))
+    parser.add_argument("action",choices=("prepare","sync","start","status","commands","wide","narrow","light","community","stop","verify","verify-accounting","seed-rates","shot"))
     parser.add_argument("output", nargs="?")
     args=parser.parse_args()
     if args.action=="prepare":
@@ -201,6 +201,13 @@ def main():
         sync()
     elif args.action=="verify-accounting":
         verify_accounting()
+    elif args.action=="seed-rates":
+        # Old synthetic fixtures intentionally lack backend identity. Explicit
+        # fixture-only rates preserve the oracle without editing those originals.
+        with hub.Store(HOME / "data/session-hub") as store:
+            for provider in ("pi", "opencode"):
+                hub.rpc(store, dict(action="usage-price", rateProvider=provider, rateModel="unknown/synthetic-"+provider,
+                                    rate=dict(input=1,output=5,cacheRead=.1,cacheWrite=2)))
     elif args.action=="start":
         subprocess.run([str(BASE / "core/hc.exe"),"server","start"],env=environment(),check=True,capture_output=True,timeout=30,creationflags=subprocess.CREATE_NO_WINDOW)
         p=subprocess.Popen([str(BASE / "install/herdr-app.exe")],env=environment(),cwd=BASE)

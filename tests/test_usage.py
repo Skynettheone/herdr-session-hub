@@ -125,12 +125,15 @@ class AccountingTests(unittest.TestCase):
                 usage.period(req, NOW)
 
     def test_invalid_accounting_never_becomes_nan_or_negative(self):
-        for bad in (-1, True, float("nan"), float("inf"), 1e50, "10", None):
+        for bad in (-1, True, float("nan"), float("inf"), 1e50, 10**1000, "10", None):
             record = claude()
             record["message"]["usage"]["input_tokens"] = bad
             events, _, warnings, _ = usage.parse("claude", [record])
             self.assertFalse(events)
             self.assertTrue(warnings)
+        huge = 10**1000
+        self.assertIsNone(usage.instant(huge))
+        self.assertIsNone(usage.event("pi", "id", AT, "m", [1, 2, 0, 0], huge)["reportedCost"])
 
     def test_invalid_cumulative_is_not_treated_as_legacy_request(self):
         header = {"type": "session_meta", "payload": {"id": ID}}
@@ -155,9 +158,26 @@ class AccountingTests(unittest.TestCase):
         result = usage.parse("codex", [dict(type="session_meta", payload={"id":ID}), row])
         self.assertEqual(result[3][0]["used"], 61)
         self.assertEqual(result[3][0]["at"], "2026-11-10T12:00:00+00:00")
-        for value in (-1, 101, True, float("nan")):
+        for value in (-1, 101, True, float("nan"), 10**1000):
             row["payload"]["rate_limits"]["primary"]["used_percent"] = value
             self.assertFalse(usage.parse("codex", [row])[3])
+
+    def test_pi_and_opencode_price_exact_backend_qualified_models(self):
+        pi = dict(type="message",id="same",timestamp=AT,message=dict(role="assistant",model="shared",provider="one",usage=dict(input=100,output=0,cacheRead=0,cacheWrite=0)))
+        other = dict(pi, message=dict(pi["message"],provider="two"))
+        events = usage.parse("pi",[pi,other])[0]
+        rates = {"pi:shared":dict.fromkeys(usage.CHANNELS,999),
+                 "pi:one/shared":dict.fromkeys(usage.CHANNELS,1),"pi:two/shared":dict.fromkeys(usage.CHANNELS,2)}
+        result = usage.aggregate(events,{"period":"7d"},rates,NOW)
+        self.assertEqual(result["totals"]["events"],2)
+        self.assertEqual(len(result["models"]),2)
+        self.assertAlmostEqual(result["totals"]["cost"],.0003)
+        oc = dict(id="a",role="assistant",providerID="one",modelID="shared",time_created=1794312000000,tokens=dict(input=100))
+        other_oc = dict(oc,id="b",providerID="two")
+        events = usage.parse("opencode",[oc,other_oc])[0]
+        result = usage.aggregate(events,{"period":"7d"},{"opencode:shared":dict.fromkeys(usage.CHANNELS,999)},NOW)
+        self.assertEqual(len(result["models"]),2)
+        self.assertIsNone(result["totals"]["cost"])
 
 
 class UsageIntegrationTests(unittest.TestCase):
@@ -316,6 +336,48 @@ class UsageIntegrationTests(unittest.TestCase):
                 self.assertEqual(result["totals"]["cost"],.25)
         self.assertEqual(path.read_bytes(),original)
         self.assertFalse(path.with_name("opencode.db-shm").exists())
+
+    def test_failed_initial_discovery_is_not_claimed_as_zero_complete_usage(self):
+        with hub.Store(self.base / "state") as store:
+            hub.rpc(store, dict(action="profile-save", profile=self.profile))
+            initial = hub.rpc(store, dict(action="usage"))
+            self.assertIn("history discovery has not run for this profile", initial["coverage"])
+            # Only the disposable empty directory is removed; the original file
+            # stays in its existing test folder while the approved root goes missing.
+            missing = self.base / "missing-root"
+            missing.mkdir()
+            profile = store.get("profiles")[0]
+            profile["roots"] = [str(missing)]
+            store.set("profiles", [profile])
+            missing.rmdir()
+            hub.refresh(store)
+            result = self.refresh_usage(store)
+            self.assertEqual(result["sources"], 0)
+            self.assertIn("history discovery is incomplete or unavailable", result["coverage"])
+
+    def test_gemini_journal_rewinds_do_not_erase_recorded_billing(self):
+        config = self.base / "gemini/.gemini"
+        root = config / "tmp/project/chats"
+        root.mkdir(parents=True)
+        path = root / "session-synthetic.jsonl"
+        import hashlib
+        message = dict(id="billed",type="gemini",timestamp=AT,model="gemini-test",tokens=dict(input=100,output=20,cached=70,total=120),content="Synthetic")
+        rows = [{"$set":dict(sessionId=ID,projectHash=hashlib.sha256(str(self.base).encode()).hexdigest(),messages=[])},
+                message, {"$rewindTo":"billed"}, {"$patch":{"removeIds":["billed"]}}]
+        path.write_bytes(encoded(rows))
+        original = path.read_bytes()
+        with hub.Store(self.base / "state") as store:
+            hub.rpc(store,dict(action="profile-save",profile=dict(id="gemini",provider="gemini",configHome=str(config),roots=[str(root)],executable="",content=False)))
+            hub.refresh(store)
+            self.assertEqual(hub.preview(store,store.get("records")[0]["key"])["messages"],[])
+            first = self.refresh_usage(store)
+            self.assertEqual(first["totals"]["tokens"],120)
+            self.assertEqual(first["totals"]["events"],1)
+            # A later full checkpoint repeats the billed message, never bills twice.
+            with path.open("ab") as out:
+                out.write(encoded([{"$set":{"messages":[message]}}]))
+            self.assertEqual(self.refresh_usage(store)["totals"]["tokens"],120)
+        self.assertTrue(path.read_bytes().startswith(original))
 
 
 if __name__ == "__main__":

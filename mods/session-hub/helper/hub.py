@@ -1193,7 +1193,25 @@ def usage_scan(store, row, cache, event_budget):
                   and cache.get("guard") == usage_guard(path, offset))
         if cache.get("version") != parser.VERSION or old_stamp != stamp and not append:
             cache, offset = {}, 0
-        data, rows, consumed, skip, bad, big, eof = source_records(row["provider"], path, offset, cache.get("skip", False))
+        if row["provider"] == "gemini":
+            # Accounting is deliberately separate from active-conversation replay:
+            # $rewindTo/removeIds cannot cancel previously billed inference.
+            data, eof = read_window(path)
+            rows, consumed, skip, bad, big = [], 0, False, 0, 0
+            if eof:
+                try:
+                    if path.suffix == ".json":
+                        rows, consumed = [json.loads(data)], len(data)
+                    else:
+                        rows, consumed, skip, bad, big = records_in(data, eof)
+                    if consumed != len(data) or bad or big:
+                        rows = []
+                except (ValueError, TypeError, RecursionError):
+                    bad = 1
+            else:
+                big = 1
+        else:
+            data, rows, consumed, skip, bad, big, eof = source_records(row["provider"], path, offset, cache.get("skip", False))
         offset += consumed
         pending = consumed > 0 and (not eof or b"\n" in data[consumed:])
         waiting = not pending and (not eof or consumed != len(data))
@@ -1254,6 +1272,18 @@ def usage_rpc(store, req):
     sources = list(usage_sources(store, req))
     namespaces = usage_namespaces(store, sources)
     all_events, coverage, limits, pending = [], {}, [], 0
+    profiles = {p["id"]: p for p in store.get("profiles", [])}
+    seen_statuses = {s.get("profile") for s in store.get("statuses", [])}
+    for profile in profiles.values():
+        if (profile.get("enabled") and profile["id"] not in seen_statuses
+                and (not req.get("profile") or req["profile"] == profile["id"])
+                and req.get("provider", "all") in ("all", profile.get("provider"))):
+            coverage["history discovery has not run for this profile"] = coverage.get("history discovery has not run for this profile", 0) + 1
+    for status in store.get("statuses", []):
+        profile = profiles.get(status.get("profile"), {})
+        if (profile.get("enabled") and (not req.get("profile") or status.get("profile") == req["profile"])
+                and req.get("provider", "all") in ("all", profile.get("provider")) and status.get("state") != "ready"):
+            coverage["history discovery is incomplete or unavailable"] = coverage.get("history discovery is incomplete or unavailable", 0) + 1
     advanced, count, deadline = 0, 0, time.monotonic() + 4
     caches = (json.loads(v) for (v,) in store.db.execute("SELECT v FROM kv WHERE k LIKE 'usage:file:%'"))
     budget = parser.MAX_EVENTS - sum(len(c.get("events", [])) for c in caches if c.get("version") == parser.VERSION)
@@ -1263,7 +1293,7 @@ def usage_rpc(store, req):
         if row["provider"] == "copilot":
             coverage["Copilot usage is not persisted by the native CLI"] = coverage.get("Copilot usage is not persisted by the native CLI", 0) + 1
             continue
-        if not row.get("formatSupported"):
+        if not row.get("formatSupported") or row.get("identityConflict") or row.get("subagent"):
             coverage["unsupported or unverified history format"] = coverage.get("unsupported or unverified history format", 0) + 1
             continue
         try:

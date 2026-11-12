@@ -68,6 +68,19 @@ with only a safe basename displayed; equal basenames do not merge directories.
 Source format gates and partial coverage are explicit. A short byte window that
 hits the JSON record budget continues in another batch even at filesystem EOF.
 
+Gemini accounting reads original billing records separately from conversation
+replay: `$rewindTo`, removal patches and repeated checkpoints must not erase or
+double-count recorded inference. Legacy JSON cannot recover requests no longer
+present in that file. Pi/OpenCode model keys include their recorded upstream
+backend (`backend/model`); an absent backend is explicitly `unknown/model` and
+reported in coverage. Old ambiguous model-only prices are not silently reused.
+
+Append guards check the committed prefix head and boundary, plus file identity,
+size and timestamps. They are not a cryptographic audit of every old byte on
+each append. If another tool edits the middle of a transcript while also growing
+it, clear the numeric cache and refresh for a complete re-read. Normal append,
+replacement, truncation and same-size rewrite paths have fixture coverage.
+
 Required gates: adversarial parser/accounting fixtures, incremental and encrypted
 state integration tests, host UI behavior tests, installed SDK check, disposable
 native GUI interaction/graph checks, manual security review, essential CI and

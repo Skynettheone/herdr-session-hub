@@ -2,6 +2,14 @@
 
 ## 0.1.0-dev — 2026-11-12
 
+- Add switchable native History/Usage views with themed graphs, profile/provider
+  and UTC period filters, token/cache totals, model/day/project breakdowns,
+  per-session averages, explicit local model rates and timestamped recorded limits.
+- Add bounded encrypted numeric accounting, provider-specific token normalization,
+  billing deduplication, separate local-store/project identities and visible
+  incomplete coverage. Preserve Gemini billing across journal rewinds and qualify
+  Pi/OpenCode model prices by upstream backend. No credential or network access.
+
 - Simplify profile editing with dedicated guided/multiline JSON views, persistent
   Save/Cancel controls, required-field guidance, draft cancellation and fixed IDs.
 - Focus native input frames and search padding explicitly; add original-name reset.
