@@ -1,5 +1,23 @@
 # Implementation security review — 2026-11-12
 
+## Package and installer follow-up
+
+Release verification now rejects incomplete/empty/duplicate/unsafe manifests,
+missing or altered runtime files, unexpected payloads, reparse/hard links and
+private development files, with bounded reads/counts. The builder validates both
+staging and extraction; installation validates before target writes. Six new
+adversarial package tests passed with actual Windows file/directory links.
+
+Same-version upgrades previously rebuilt the old mod's runtime before validating
+the new mod. Unique runtime directories now preserve rollback environments.
+An exclusive installer lock serializes upgrades. Failure injection after backing
+up the mod proved the final-swap failure restores old runtime.json and a working
+old helper. Unresolved power-loss receipts and held installer locks refuse new
+installs. Source bundle, layout/key/provider sentinels remained unchanged.
+No publisher key or independent human audit is available; hashes do not establish
+publisher identity. Review scope remains trusted same-user code, not an adversarial
+local-user sandbox. See PRODUCTION_READINESS.md for current claim boundaries.
+
 Scope: local source review and synthetic adversarial tests. This is the
 implementer's review, **not an independent audit or a certification**.
 

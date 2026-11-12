@@ -42,6 +42,7 @@ bounded reads and visible partial coverage.
 | F16 portability / sync | Encrypted metadata file exchange implemented; native restore and remote sync unavailable |
 
 See the full [F01–F16 status and release gates](docs/FEATURE_STATUS.md),
+[current readiness and remaining limits](docs/PRODUCTION_READINESS.md),
 [test evidence](docs/TEST_RESULTS.md), [security findings](docs/SECURITY_REVIEW.md),
 [pinned upstream review](docs/UPSTREAM_REVIEW.md) and [user guide](docs/USER_GUIDE.md).
 

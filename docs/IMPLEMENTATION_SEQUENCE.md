@@ -1,5 +1,9 @@
 # Implementation sequence and acceptance gates
 
+This is the original implementation checklist, retained as a specification.
+For completed evidence and genuine remaining limits, use FEATURE_STATUS.md and
+PRODUCTION_READINESS.md; unchecked historical boxes below are not current status.
+
 The requested scope is all **F01–F16**. Build working, testable vertical slices; never hide a missing capability behind inert UI.
 
 ## Gate 0 — research and decisions

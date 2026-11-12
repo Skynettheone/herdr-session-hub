@@ -1,5 +1,17 @@
 # Test results — 2026-11-12
 
+## Release-hardening follow-up
+
+**82 Python tests** passed in 33.884 seconds (76 previous + six adversarial
+package groups), along with **17 native-host groups** and Ruff. The 10k-record
+sample took 0.238 seconds. The renewed disposable install smoke passed checksum
+tamper refusal before target writes, first install, injected final-swap failure
+and old-helper recovery, unresolved receipt refusal, exclusive-lock refusal,
+separate-runtime upgrade, unchanged source bundle, uninstall WhatIf, retained
+state, explicit Hub purge and layout/key/original hashes. No mod/launcher/parser
+code changed; existing native GUI/continuity evidence remains scoped below.
+Final build/hosted CI/artifact receipts are recorded in RELEASE_REPORT.md.
+
 This is a checked **0.1.0-dev Windows candidate**, not an unqualified production
 release. The F01–F16 implementation/limits are in FEATURE_STATUS.md. Native checks
 used disposable installations, histories and config homes; production config was

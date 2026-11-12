@@ -30,29 +30,21 @@ release gates remain in force.
 | F15 | Removal tombstone + restore view, originals untouched | Original deletion deliberately unavailable; disabled operation tested |
 | F16 | Encrypted metadata export/import, passphrase terminal, schema/checksum, wrong-key/corrupt handling, dry-run, foreign records/conflicts, explicit annotation linking | No native transcript export/restore, remote transport or continuous sync; unavailable operations tested |
 
-## Release gates still open
+## Release scope and remaining gates
 
-1. Distinct personal/company identities remain unverified: only one real account
-   is available. Signed profile routing and unsigned negative control passed.
-2. Broader active ownership across mixed CLI builds/profiles remains unverified.
-   Actual live detection passed for all four tested CLIs. Codex 0.164 uses its
-   per-thread lock; other adapters conservatively block their selected CLI image
-   or recognized Node provider. This may block unrelated sessions.
-3. Interactive coverage of every control in real Herdr, multiple panes and both
-   themes/narrow widths; host mocks do not establish all native interactions.
-   The renewed pass verified search/filter/preview/settings, dark/light/custom-theme
-   rendering, multiple panes and captures. Four primary native launch controls
-   passed. Native alias/form typing and save, picker cancellation, required-field
-   validation, invalid JSON and Cancel subsequently passed after usability fixes;
-   exact native/backend coverage is in FORM_ACCEPTANCE.md. Privacy steps require
-   user handling and universal GUI/authentication coverage is not claimed.
-4. Future Herdr versions and unsupported OSes require new acceptance. Actual
-   0.1.14→0.1.15 update, backup rollback and re-update passed in isolation.
-5. Manual security assessment completed at the user's request, with regression
-   fixes documented in SECURITY_REVIEW.md. No independent human audit is claimed;
-   a signed build strategy is still needed if native binaries ship.
-6. User approval before production installation or gallery/release publication. Source
-   commits and pushing to the requested origin were explicitly authorized.
+[PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) is the current inventory.
+Native continuation, representative GUI controls, user-controlled privacy tests,
+manual security review and the isolated updater/rollback are completed within
+their recorded scope. They are no longer blanket unfinished tasks.
+
+Distinct company identity, other OS/provider builds and additional native agents
+still require external acceptance environments. Conservative ownership checks,
+bounded replay, unavailable deletion/native restore/remote sync and offline
+recorded-only Usage are deliberate guarded limits. No independent human audit or
+publisher signature is claimed. The maintainer must choose and accept an explicit
+supported release scope before clearing the release gate; production installation
+and publication also need separate approval. Source commits and pushing to the
+requested origin were explicitly authorized.
 
 `version.json` keeps `releaseReady=false`. `build-release.ps1` refuses normal
 release mode until changed after evidence is recorded. `-AllowUnverified` builds

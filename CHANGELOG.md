@@ -70,3 +70,12 @@
   uninstall ancestor checks and explicit profile trust/content consent.
 - Added isolated real-account/manual Gemini harnesses. Available real-account
   coverage uses two stores with one identity; no distinct company claim is made.
+# Release hardening follow-up — 2026-11-12
+
+- Verify complete bounded package manifests before installation and check fresh
+  archive extraction during builds; reject linked/private/unlisted payloads.
+- Keep separate runtimes for upgrades, serialize installers, restore the prior
+  mod on ordinary swap failure and retain interrupted-install recovery receipts.
+- Reconcile stale security/release notes with completed native acceptance and
+  document remaining external evidence and guarded capability limits.
+
