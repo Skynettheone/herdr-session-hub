@@ -92,9 +92,10 @@ export function renderUsage(v, cx, kit) {
     area.line_to("100%","100%").close();
     plot.child(window.paint_path(area.build(),Background.solid(t.accent).opacity(.10)).absolute().top(0).left(0).size_full());
     const colors=[t.accent,t.foreground,t.blocked,t.muted,t.solid,t.dim];
-    for(const [index,provider] of (data.providers||[]).entries()) {
-      const line=PathBuilder.stroke(1.8);
-      if(index)line.dash_array([Math.max(2,7-index),index+2]);
+    const seriesStyle=provider=>Math.max(0,["claude","codex","pi","opencode","gemini","copilot"].indexOf(provider));
+    const stroke=(index,width)=>{const line=PathBuilder.stroke(width);if(index)line.dash_array([Math.max(2,7-index),index+2]);return line;};
+    for(const provider of data.providers||[]) {
+      const index=seriesStyle(provider.key),line=stroke(index,1.8);
       const series=plotPoints(rows.map(r=>money?r.series?.[provider.key]?.cost:r.series?.[provider.key]?.tokens),peak);
       series.forEach(([x,y],i)=>i?line.line_to(x+"%",y+"%"):line.move_to(x+"%",y+"%"));
       plot.child(window.paint_path(line.build(),colors[index%colors.length]).absolute().top(0).left(0).size_full());
@@ -103,7 +104,12 @@ export function renderUsage(v, cx, kit) {
     const date=value=>value?.includes("T")?value.slice(5,16).replace("T"," "):value?.slice(5)||"";
     chart.child(h_flex().pl(48).justify_between().child(text(date(rows[0]?.key),t.dim,10))
       .child(text(date(rows[Math.floor(rows.length/2)]?.key),t.dim,10)).child(text(date(rows.at(-1)?.key),t.dim,10)));
-    chart.child(h_flex().gap(5).flex_wrap().children((data.providers||[]).map((p,i)=>button("usage-legend-"+p.key,providerName(p.key)+" · "+amount(money?p.cost:p.tokens,money),cx=>reload(cx,{usageProvider:p.key}),{agent:p.key,outline:true,label:providerName(p.key)+"; "+amount(money?p.cost:p.tokens,money)+"; line pattern "+(i+1)}))));
+    chart.child(text("Shaded area: selected total · Lines: individual providers",t.muted,10.5));
+    chart.child(h_flex().gap(5).flex_wrap().children((data.providers||[]).map(p=>{
+      const index=seriesStyle(p.key),sample=stroke(index,2).move_to("0%","50%").line_to("100%","50%").build();
+      return button("usage-legend-"+p.key,providerName(p.key)+" · "+amount(money?p.cost:p.tokens,money),cx=>reload(cx,{usageProvider:p.key}),{agent:p.key,outline:true,label:providerName(p.key)+"; "+amount(money?p.cost:p.tokens,money)+"; line pattern "+(index+1)})
+        .child(window.paint_path(sample,colors[index]).w(18).h(8).flex_none());
+    })));
     return chart;
   }
   function limits() {
