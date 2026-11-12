@@ -61,6 +61,9 @@ def parse(x, meta):
     if x.get("type") in ("user", "gemini"):
         content = x.get("content")
         if isinstance(content, list):
-            content = "\n".join(clean(item.get("text"), 1024 * 1024) for item in content[:1000] if isinstance(item, dict))
+            content = "\n".join(clean(item.get("text"), 1024 * 1024) for item in content[:1000] if isinstance(item, dict)
+                                and not str(item.get("text", "")).lstrip().startswith("<session_context>"))
+        elif isinstance(content, str) and content.lstrip().startswith("<session_context>"):
+            return None
         return ("user" if x["type"] == "user" else "assistant", clean(content, 1024 * 1024))
     return None

@@ -29,7 +29,7 @@ import uuid
 from compression import zstd
 
 SCHEMA = 2
-PARSER = 4
+PARSER = 5
 CHUNK = 2 * 1024 * 1024
 LINE = 1024 * 1024
 MAX_STATE = 256 * 1024 * 1024
@@ -150,7 +150,9 @@ def atomic(path, data, backup=False):
             previous = path.with_name(path.name + ".bak")
             if previous.exists() and is_link(previous):
                 raise HubError("Linked backup refused")
-            shutil.copyfile(path, previous)
+            # Replace the directory entry instead of truncating a possible hard
+            # link to an unrelated file. Both writes remain in Hub's namespace.
+            atomic(previous, path.read_bytes())
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
@@ -1029,7 +1031,7 @@ def resume_spec(store, key, profile_id, active_probe=None):
         raise HubError("This session was just requested; duplicate launch refused")
     args = {"claude": ["--resume", native], "codex": ["--no-daemon", "resume", native],
             "opencode": ["--session", native], "pi": ["--session", str(path)],
-            "gemini": ["--session-file", str(path)]}[r["provider"]]
+            "gemini": ["--resume", native]}[r["provider"]]
     prefix = [p["launchScript"]] if p.get("launchScript") else []
     return {"argv": [p["executable"], *prefix, *args], "cwd": str(cwd), "env": p["env"], "profile": p["id"]}
 
@@ -1228,9 +1230,16 @@ def metadata_manifest(store):
     for key, value in store.db.execute("SELECT k,v FROM kv WHERE k LIKE 'annotation:%'"):
         r = next((r for r in store.get("records", []) if r["key"] == key[11:]), None)
         if r:
-            entries.append({"origin": key[11:], "provider": r["provider"], "nativeId": r["nativeId"], "annotation": json.loads(value)})
+            entries.append({"origin": key[11:], "provider": r["provider"], "nativeId": r["nativeId"], "annotation": safe_annotation(json.loads(value))})
     body = {"schema": 1, "kind": "hub-metadata-only", "createdAt": dt.datetime.now(dt.timezone.utc).isoformat(), "entries": entries}
     return {"body": body, "sha256": digest(body)}
+
+
+def safe_annotation(value):
+    result = dict(value)
+    if "alias" in result:
+        result["alias"] = redact(clean(result["alias"], 160))
+    return result
 
 
 def portable_encrypt(manifest, password):
@@ -1255,6 +1264,8 @@ def portable_decrypt(data, password):
         manifest = json.loads(AESGCM(key).decrypt(data[20:32], data[32:], data[:32]))
     except Exception:
         raise HubError("Wrong passphrase or damaged encrypted bundle") from None
+    if not isinstance(manifest, dict):
+        raise HubError("Bundle schema or checksum mismatch")
     body = manifest.get("body", {})
     if not isinstance(body, dict) or set(manifest) != {"body", "sha256"} or set(body) != {"schema", "kind", "createdAt", "entries"} or body.get("schema") != 1 or body.get("kind") != "hub-metadata-only" or manifest.get("sha256") != digest(body):
         raise HubError("Bundle schema or checksum mismatch")
@@ -1270,6 +1281,8 @@ def portable_decrypt(data, password):
             raise HubError("Invalid alias")
         if any(name in annotation and not isinstance(annotation[name], bool) for name in ("removed", "archived")):
             raise HubError("Invalid archive/removal flags")
+        if "updatedAt" in annotation and (not isinstance(annotation["updatedAt"], str) or len(annotation["updatedAt"]) > 100):
+            raise HubError("Invalid metadata timestamp")
     return manifest
 
 
@@ -1278,6 +1291,7 @@ def merge_manifest(store, manifest, apply=False):
     # Exact origin only. Same UUID on another machine/profile must never auto-bind.
     keys = {r["key"] for r in store.get("records", [])}
     for item in manifest["body"]["entries"]:
+        item = {**item, "annotation": safe_annotation(item["annotation"])}
         origin = item["origin"]
         key = "annotation:" + origin if origin in keys else "foreign:" + digest(item)
         old = store.get(key)
@@ -1369,6 +1383,8 @@ def main():
             print(json.dumps({"ok": True, "result": result}, ensure_ascii=True))
             return 0
         file = local_path(args.file)
+        if file.name.casefold() in SECRET_NAMES or file.suffix.casefold() != ".hsh":
+            raise HubError("Choose an encrypted .hsh metadata bundle; credential and other file types are refused")
         password = getpass.getpass("Bundle passphrase (never stored): ")
         if args.command == "export":
             if file.exists():
@@ -1384,7 +1400,7 @@ def main():
                 os.fsync(f.fileno())
             print(json.dumps({"exported": True, "kind": "metadata only; no profiles, paths, credentials or transcripts"}))
         else:
-            if is_link(file) or file.stat().st_size > 8 * CHUNK:
+            if is_link(file) or file.stat().st_nlink != 1 or file.stat().st_size > 8 * CHUNK:
                 raise HubError("Unsafe bundle path or size")
             manifest = portable_decrypt(file.read_bytes(), password)
             with Store(args.state) as store:

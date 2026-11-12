@@ -11,8 +11,9 @@ foreach($name in $names) {
     $part=$target
     while($part) {
         if ((Test-Path -LiteralPath $part) -and ((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Linked uninstall target refused' }
-        if ($part -eq $targetHome) { break }
-        $part=[IO.Path]::GetDirectoryName($part)
+        $parent=[IO.Path]::GetDirectoryName($part)
+        if($parent -eq $part){break}
+        $part=$parent
     }
     if ((Test-Path -LiteralPath $target) -and $PSCmdlet.ShouldProcess($target,'Remove only Session Hub owned files (close Herdr first)')) {
         Remove-Item -LiteralPath $target -Recurse -Force

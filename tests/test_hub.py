@@ -141,6 +141,52 @@ class HubTests(unittest.TestCase):
             row = self.scan(store, profile)
             self.assertFalse(row["subagent"])
 
+    def test_atomic_backup_never_truncates_a_hardlinked_original(self):
+        state = self.base / "sample.hub";state.write_bytes(b"previous encrypted state")
+        unrelated = self.base / "original.jsonl";unrelated.write_bytes(b"untouched original history")
+        backup = state.with_name(state.name + ".bak")
+        os.link(unrelated, backup)
+        hub.atomic(state, b"new encrypted state", backup=True)
+        self.assertEqual(unrelated.read_bytes(), b"untouched original history")
+        self.assertEqual(backup.read_bytes(), b"previous encrypted state")
+        self.assertEqual(state.read_bytes(), b"new encrypted state")
+
+    def test_uninstaller_refuses_reparse_ancestor_above_selected_home(self):
+        real = self.base / "real";mod = real / "app/mods/session-hub"
+        mod.mkdir(parents=True)
+        sentinel = mod / "main.js";sentinel.write_text("preserved")
+        link = self.base / "alias"
+        os.symlink(real, link, target_is_directory=True)
+        result = hub.subprocess.run(["pwsh.exe", "-NoProfile", "-File", str(ROOT / "scripts/uninstall.ps1"),
+                                     "-AppHome", str(link / "app"), "-WhatIf"], capture_output=True, timeout=20)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"Linked uninstall target refused", result.stderr)
+        self.assertEqual(sentinel.read_text(), "preserved")
+
+    def test_bundle_cli_refuses_credential_paths_before_any_read_or_passphrase(self):
+        credential = self.base / "auth.json";credential.write_text("synthetic credential sentinel")
+        argv = ["hub.py", "--state", str(self.state), "import", str(credential)]
+        with patch.object(sys, "argv", argv), patch.object(hub.getpass, "getpass", side_effect=AssertionError("must not prompt")):
+            self.assertEqual(hub.main(), 1)
+
+    def test_gemini_native_resume_keeps_identity_and_hides_transport_context(self):
+        profile, path = self.additional_provider("gemini")
+        profile.update(executable=sys.executable, projectPath=str(self.cwd))
+        path.write_bytes(encode([
+            {"sessionId":ID,"projectHash":hashlib.sha256(str(self.cwd).encode()).hexdigest()},
+            {"id":"transport","type":"user","content":[{"text":"<session_context>injected machine setup</session_context>"}]},
+            {"id":"task","type":"user","content":[{"text":"Real Gemini task"}]},
+            {"id":"answer","type":"gemini","content":"remembered response"}]))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile, True)
+            self.assertEqual(row["title"], "Real Gemini task")
+            self.assertNotIn("injected machine", str(hub.preview(store, row["key"])))
+            with patch.object(hub.subprocess, "run", return_value=hub.subprocess.CompletedProcess([], 0, b"0.49.0", b"")):
+                self.assertTrue(hub.rpc(store, {"action":"verify-version","profile":profile["id"]})["verified"])
+            hub.rpc(store, {"action":"trust-project","key":row["key"],"profile":profile["id"],"confirmation":str(self.cwd)})
+            spec = hub.resume_spec(store, row["key"], profile["id"], lambda _:False)
+            self.assertEqual(spec["argv"], [sys.executable, "--resume", ID])
+
     def test_snapshot_refuses_open_writers_and_prevents_checkpoint_races(self):
         root = self.base / "offline-source";root.mkdir()
         path = root / "opencode.db"
@@ -644,6 +690,21 @@ class HubTests(unittest.TestCase):
         with hub.Store(self.state) as store:
             self.assertEqual(store.get("schema"), 2)
             self.assertEqual(store.get("kept"), "yes")
+
+    def test_portable_import_cannot_bypass_alias_secret_filter(self):
+        p, _ = self.provider()
+        with hub.Store(self.state) as store:
+            row = self.scan(store, p)
+            body = {"schema":1,"kind":"hub-metadata-only","createdAt":"2026-11-12", "entries":[
+                {"origin":row["key"],"provider":"claude","nativeId":ID,"annotation":{"alias":"token=synthetic-secret-value"}}]}
+            manifest = {"body":body,"sha256":hub.digest(body)}
+            hub.merge_manifest(store, manifest, True)
+            self.assertNotIn("synthetic-secret-value", store.get("annotation:"+row["key"])["alias"])
+            self.assertNotIn("synthetic-secret-value", json.dumps(hub.metadata_manifest(store)))
+        # A valid encrypted JSON payload still needs object/schema validation.
+        blob = hub.portable_encrypt([], "synthetic passphrase 123")
+        with self.assertRaises(hub.HubError):
+            hub.portable_decrypt(blob, "synthetic passphrase 123")
 
     def test_corrupt_state_refuses_silent_reset(self):
         self.state.mkdir()
