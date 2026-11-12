@@ -109,6 +109,38 @@ class PortableStateTests(unittest.TestCase):
         library.SecKeychainItemFreeContent.assert_called_once()
         library.SecKeychainAddGenericPassword.assert_not_called()
 
+    def test_local_filesystem_gate_rejects_network_and_unknown_types(self):
+        library = MagicMock()
+        def detected(_path, buffer):
+            ctypes.c_ulong.from_buffer(buffer).value = 0xef53
+            return 0
+        library.statfs.side_effect = detected
+        with patch.object(platform_io.sys, "platform", "linux"), patch.object(platform_io.ctypes, "CDLL", return_value=library):
+            platform_io.local_filesystem(self.root)
+            library.statfs.side_effect = lambda _p, buffer: 0
+            with self.assertRaises(platform_io.PlatformError):
+                platform_io.local_filesystem(self.root)
+            library.statfs.side_effect = lambda _p, buffer: -1
+            with self.assertRaises(platform_io.PlatformError):
+                platform_io.local_filesystem(self.root)
+
+    def test_process_ownership_is_conservative_without_reading_arguments(self):
+        def answer(output, code=0):
+            return subprocess.CompletedProcess([], code, output)
+        with patch.object(platform_io.subprocess, "run", return_value=answer(b"101 /usr/bin/node\n")) as run, patch.object(platform_io.os, "getpid", return_value=99):
+            self.assertTrue(platform_io.process_owned("pi", "/usr/bin/node"))
+            self.assertFalse(platform_io.process_owned("claude", "/usr/bin/claude"))
+            self.assertEqual(run.call_args.args[0], ["/bin/ps", "-A", "-o", "pid=,comm="])
+        for output, code in ((b"malformed", 0), (b"", 0), (b"101 node", 1)):
+            with patch.object(platform_io.subprocess, "run", return_value=answer(output, code)):
+                self.assertIsNone(platform_io.process_owned("pi"))
+
+    def test_shell_script_is_not_a_native_executable(self):
+        script = self.root / "synthetic-cli"
+        script.write_bytes(b"#!/bin/sh\necho must-not-run\n")
+        script.chmod(0o700)
+        self.assertFalse(platform_io.native_executable(script))
+
     @unittest.skipIf(os.name == "nt", "POSIX ownership/mode acceptance")
     def test_private_directory_rejects_shared_permissions(self):
         self.root.chmod(0o755)

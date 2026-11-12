@@ -81,6 +81,11 @@ def local_path(value, directory=False):
             raise HubError("Symlink or reparse-point paths are disabled")
     if directory and not p.is_dir():
         raise HubError("Directory is missing or inaccessible")
+    if os.name != "nt":
+        try:
+            _adapters.platform_io.local_filesystem(p)
+        except _adapters.platform_io.PlatformError as error:
+            raise HubError(str(error)) from None
     return p
 
 
@@ -397,14 +402,18 @@ def profile_validate(p):
         raise HubError("Choose an absolute native executable path")
     # Pin user-selected executable aliases; history roots remain link-free.
     exe = local_path(str(Path(raw_exe).resolve(strict=False))) if raw_exe else None
-    if exe and exe.suffix.lower() != ".exe":
+    if exe and os.name == "nt" and exe.suffix.lower() != ".exe":
         raise HubError("Choose an installed native .exe; shell scripts and command strings are disabled")
+    if exe and os.name != "nt" and exe.is_file() and (exe.name.lower() in SECRET_NAMES or not _adapters.platform_io.native_executable(exe)):
+        raise HubError("Choose an executable native binary; use an explicit supported Node launcher for JavaScript CLIs")
     # Prevent accidental cross-profile resume. Config-home ownership is explicit.
     config = local_path(p.get("configHome", ""), True)
     script = p.get("launchScript")
     if script:
-        allowed = {"pi": "pi-launcher.js", "gemini": "gemini.js"}.get(p["provider"])
-        if not allowed or not exe or exe.name.lower() != "node.exe" or Path(script).name != allowed or not local_path(script).is_file():
+        allowed = ({"pi": {"pi-launcher.js"}, "gemini": {"gemini.js"}} if os.name == "nt" else
+                   {"pi": {"pi-launcher.js", "cli.js"}, "gemini": {"gemini.js"}, "codex": {"codex.js"}, "claude": {"cli.js"}}).get(p["provider"], set())
+        node_names = ("node.exe",) if os.name == "nt" else ("node", "nodejs")
+        if not exe or exe.name.lower() not in node_names or Path(script).name not in allowed or not local_path(script).is_file():
             raise HubError("Only a supported provider's explicit native Node launcher is allowed as a script target")
     for root in roots:
         if p["provider"] in ("claude", "codex", "pi"):
@@ -453,7 +462,13 @@ def profile_validate(p):
         local_path(exclusion)
         if not any(Path(exclusion).is_relative_to(Path(r)) for r in roots):
             raise HubError("Exclusions must be inside the approved roots")
+    if not native_continuation_verified():
+        p["resumeDisabled"] = "macOS/Linux native continuation awaits platform-specific Herdr and provider acceptance; browsing is available"
     return p
+
+
+def native_continuation_verified():
+    return os.name == "nt"
 
 
 def source_records(provider, path, offset=0, skip=False):
@@ -574,9 +589,15 @@ def opencode_snapshot(path, root):
     # handles. Hold DB and WAL share-deny-write handles together before reading.
     # Existing writers fail this acquisition; new writers/checkpoints cannot open.
     with contextlib.ExitStack() as stack:
-        source = stack.enter_context(offline_source(path))
-        wal = path.with_name(path.name + "-wal")
-        wal_source = stack.enter_context(offline_source(source_file(wal, root))) if wal.exists() else None
+        if os.name == "nt":
+            source = stack.enter_context(offline_source(path))
+            wal = path.with_name(path.name + "-wal")
+            wal_source = stack.enter_context(offline_source(source_file(wal, root))) if wal.exists() else None
+        else:
+            try:
+                source, wal_source = stack.enter_context(_adapters.platform_io.sqlite_sources(path, lambda p: source_file(p, root)))
+            except _adapters.platform_io.PlatformError as error:
+                raise HubError(str(error)) from None
         before = opencode_fingerprint(path, root)
         if sum(stamp[2] for stamp in before if stamp) > _adapters.sqlite_snapshot.LIMIT:
             raise HubError("OpenCode database/WAL exceeds the 128 MiB snapshot budget")
@@ -885,7 +906,7 @@ def preview(store, key):
 def running_provider(provider, executable=None):
     """Privacy preserving: enumerate executable names, never other command lines."""
     if os.name != "nt":
-        return None
+        return _adapters.platform_io.process_owned(provider, executable)
     class Process(ctypes.Structure):
         _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
                     ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
@@ -980,6 +1001,17 @@ def codex_writer_owned(profile, native):
         return False
     if not path.is_file() or path.stat().st_nlink != 1:
         return None
+    if os.name != "nt":
+        import fcntl
+        try:
+            with path.open("rb") as lock:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+            return False
+        except BlockingIOError:
+            return True
+        except OSError:
+            return None
     class Overlapped(ctypes.Structure):
         _fields_ = [("Internal", ctypes.c_size_t), ("InternalHigh", ctypes.c_size_t),
                     ("Offset", wintypes.DWORD), ("OffsetHigh", wintypes.DWORD), ("hEvent", wintypes.HANDLE)]
@@ -1079,19 +1111,25 @@ def profile_environment(overrides):
 def probe():
     versions = {}
     for name in PROVIDERS:
-        exe = shutil.which(name + ".exe")
+        exe = shutil.which(name + ".exe" if os.name == "nt" else name)
         # Pi's PowerShell shim is not accepted as an executable. User may configure
         # a native launcher; do not run arbitrary .cmd/.ps1 scripts automatically.
-        script = Path.home() / ".pi/agent/bin/pi-launcher.js" if name == "pi" else None
+        script = Path.home() / ".pi/agent/bin/pi-launcher.js" if name == "pi" and os.name == "nt" else None
         if name == "pi" and not exe and script.is_file():
             exe = shutil.which("node.exe")
-        if name == "gemini" and not exe:
+        if name == "gemini" and not exe and os.name == "nt":
             script = Path(os.environ.get("APPDATA", "")) / "npm/node_modules/@google/gemini-cli/bundle/gemini.js"
             if script.is_file():
                 exe = shutil.which("node.exe")
+        if exe and os.name != "nt":
+            resolved = Path(exe).resolve()
+            if not _adapters.platform_io.native_executable(resolved):
+                allowed = {"pi": {"cli.js", "pi-launcher.js"}, "gemini": {"gemini.js"}, "codex": {"codex.js"}, "claude": {"cli.js"}}
+                script = resolved if resolved.name in allowed.get(name, set()) else None
+                exe = shutil.which("node") if script else None
         versions[name] = {"installed": bool(exe), "executable": str(Path(exe).resolve()) if exe else None,
                           "launchScript": str(script) if script and script.is_file() else None,
-                          "state": "native executable found" if exe else "native .exe missing; shell shims are disabled"}
+                          "state": "native executable found" if exe else "native executable missing; unsupported shell shims are disabled"}
     return {"providers": versions, "python": sys.version.split()[0], "sqlite": sqlite3.sqlite_version,
             "platform": sys.platform, "schema": SCHEMA}
 

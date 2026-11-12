@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from compression import zstd
+from portable_support import isolate_vault
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("usage_hub", ROOT / "mods/session-hub/helper/hub.py")
@@ -182,6 +183,7 @@ class AccountingTests(unittest.TestCase):
 
 class UsageIntegrationTests(unittest.TestCase):
     def setUp(self):
+        isolate_vault(self, hub)
         (ROOT / ".dev/tests").mkdir(parents=True, exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(prefix="usage-", dir=ROOT / ".dev/tests")
         self.base = Path(self.tmp.name)

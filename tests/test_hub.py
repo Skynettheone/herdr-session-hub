@@ -12,6 +12,7 @@ import tracemalloc
 import unittest
 from unittest.mock import patch
 from compression import zstd
+from portable_support import isolate_vault
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("hub", ROOT / "mods/session-hub/helper/hub.py")
@@ -42,6 +43,7 @@ def fixture(provider, cwd, native=ID):
 
 class HubTests(unittest.TestCase):
     def setUp(self):
+        isolate_vault(self, hub)
         (ROOT / ".dev/tests").mkdir(parents=True, exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(prefix="hub-test-", dir=ROOT / ".dev/tests")
         self.base = Path(self.tmp.name)
@@ -167,6 +169,7 @@ class HubTests(unittest.TestCase):
                         hub.rpc(store,{"action":"profile-save","profile":{**saved,name:value}})
             self.assertFalse(store.get("profiles")[0]["content"])
 
+    @unittest.skipUnless(os.name == "nt", "Windows installer; POSIX installer has separate acceptance")
     def test_uninstaller_refuses_reparse_ancestor_above_selected_home(self):
         real = self.base / "real";mod = real / "app/mods/session-hub"
         mod.mkdir(parents=True)
@@ -203,6 +206,7 @@ class HubTests(unittest.TestCase):
             spec = hub.resume_spec(store, row["key"], profile["id"], lambda _:False)
             self.assertEqual(spec["argv"], [sys.executable, "--resume", ID])
 
+    @unittest.skipUnless(os.name == "nt", "Windows mandatory sharing; POSIX SQLite locks tested across processes")
     def test_snapshot_refuses_open_writers_and_prevents_checkpoint_races(self):
         root = self.base / "offline-source";root.mkdir()
         path = root / "opencode.db"
@@ -237,6 +241,7 @@ class HubTests(unittest.TestCase):
             self.assertEqual(row["title"], "Real user task")
             self.assertNotIn("Internal setup", str(hub.preview(store, row["key"])))
 
+    @unittest.skipUnless(os.name == "nt", "Windows persisted WAL capture; missing POSIX SHM is deliberately refused")
     def test_offline_persisted_wal_capture_excludes_writers(self):
         # Capture a real committed WAL before SQLite checkpoints it on close,
         # then restore those bytes as a quiescent, crash-recovery style store.
@@ -415,7 +420,7 @@ class HubTests(unittest.TestCase):
             hub.clear_content(store)
         for name in ("state.hub", "state.hub.bak"):
             db = sqlite3.connect(":memory:")
-            db.deserialize(hub.protect((self.state / name).read_bytes(), True))
+            db.deserialize(hub.protect((self.state / name).read_bytes(), True, self.state))
             self.assertEqual(db.execute("SELECT count(*) FROM content").fetchone()[0], 0)
             db.close()
 
@@ -527,11 +532,12 @@ class HubTests(unittest.TestCase):
         p, path = self.provider()
         for size in (50 * 1024**2, 100 * 1024**2, 1024**3 + 1):
             with path.open("r+b") as f:
-                import ctypes, msvcrt
-                kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-                kernel.DeviceIoControl.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p]
-                returned = ctypes.c_ulong()
-                self.assertTrue(kernel.DeviceIoControl(msvcrt.get_osfhandle(f.fileno()), 0x900c4, None, 0, None, 0, ctypes.byref(returned), None))
+                if os.name == "nt":
+                    import ctypes, msvcrt
+                    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+                    kernel.DeviceIoControl.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p]
+                    returned = ctypes.c_ulong()
+                    self.assertTrue(kernel.DeviceIoControl(msvcrt.get_osfhandle(f.fileno()), 0x900c4, None, 0, None, 0, ctypes.byref(returned), None))
                 f.seek(size)
                 f.write(b'\n{"type":"progress"}\n')
             tracemalloc.start()

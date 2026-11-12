@@ -40,7 +40,7 @@ export default class SessionHub extends View {
     this.formFields = {};
     for (const [name, placeholder] of Object.entries({ id: "personal-claude", label: "Personal Claude",
       root: "Absolute session directory", configHome: "Provider config home (account directory)",
-      executable: "Absolute CLI .exe", launchScript: "Provider Node launcher (optional)", projectPath: "Gemini original project path (optional)" })) {
+      executable: "Absolute native CLI executable", launchScript: "Provider Node launcher (optional)", projectPath: "Gemini original project path (optional)" })) {
       this.formFields[name] = InputState.new({ placeholder });
     }
     for (const input of [this.search, this.alias, this.projectConfirm, this.profileEditor, this.bundlePath, ...Object.values(this.formFields), ...Object.values(this.usageFields)]) {

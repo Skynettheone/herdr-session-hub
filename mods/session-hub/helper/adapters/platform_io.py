@@ -5,6 +5,7 @@ random key held by Keychain/Secret Service, with no plaintext-key fallback.
 Interface references and native verification limits: docs/PORTABILITY_DESIGN.md.
 """
 import base64
+import contextlib
 import ctypes
 import hashlib
 import os
@@ -18,7 +19,111 @@ SERVICE = b"dev.herdr.session-hub.local-state"
 HEADER = b"HSH-POSIX1\x00"
 
 
-class PlatformError(Exception):
+def local_filesystem(path):
+    """Fail closed on network/unknown mounts; query only the selected ancestor.
+
+    Linux statfs.f_type and Darwin statfs64.f_flags follow their published C
+    ABIs. An oversized output buffer avoids depending on trailing struct fields.
+    """
+    path = Path(path)
+    while not path.exists() and path.parent != path:
+        path = path.parent
+    library = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "linux":
+        call = library.statfs
+    elif sys.platform == "darwin":
+        call = getattr(library, "statfs$INODE64", None) or getattr(library, "statfs64", None) or getattr(library, "statfs", None)
+        if call is None:
+            raise PlatformError("Native local-filesystem validation is unavailable")
+    else:
+        raise PlatformError("This operating system has no local-filesystem adapter")
+    call.argtypes = [ctypes.c_char_p, ctypes.c_void_p]
+    call.restype = ctypes.c_int
+    buffer = ctypes.create_string_buffer(4096)
+    if call(os.fsencode(path), buffer):
+        raise PlatformError("Filesystem type could not be verified")
+    if sys.platform == "linux":
+        magic = ctypes.c_ulong.from_buffer(buffer).value & 0xffffffff
+        # ext[234], btrfs, xfs, tmpfs, overlayfs, zfs, f2fs, ramfs.
+        if magic not in {0xef53, 0x9123683e, 0x58465342, 0x01021994, 0x794c7630, 0x2fc12fc1, 0xf2f52010, 0x858458f6}:
+            raise PlatformError("Network, shared-host or unverified filesystem refused")
+    elif (not ctypes.c_uint32.from_buffer(buffer, 64).value & 0x1000  # Darwin MNT_LOCAL
+          or buffer.raw[72:88].split(b"\x00", 1)[0] not in (b"apfs", b"hfs", b"tmpfs")):
+        raise PlatformError("Network or unverified filesystem refused")
+
+
+@contextlib.contextmanager
+def sqlite_sources(path, validate):
+    """Cooperative Unix SQLite locks, held through all bounded source reads.
+
+    A WAL database without an existing SHM is refused: creating a source SHM
+    would violate the read-only contract. No source SQLite connection is made.
+    """
+    import fcntl
+    with contextlib.ExitStack() as stack:
+        def opened(source):
+            stream = stack.enter_context(os.fdopen(os.open(source, os.O_RDONLY | os.O_NOFOLLOW), "rb"))
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise PlatformError("Linked or non-regular database source refused")
+            return stream
+        try:
+            database = opened(path)
+            # Shared locks across pending/reserved/shared bytes block cooperative
+            # rollback writers and checkpoints, without writing any source byte.
+            fcntl.lockf(database.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB, 514, 0x40000000, os.SEEK_SET)
+            header = database.read(100)
+            database.seek(0)
+            wal = path.with_name(path.name + "-wal")
+            shared = None
+            if wal.exists() or header[18:20] == b"\x02\x02":
+                shared_path = validate(path.with_name(path.name + "-shm"))
+                shared = opened(shared_path)
+                fcntl.lockf(shared.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB, 3, 120, os.SEEK_SET)
+            journal = opened(validate(wal)) if wal.exists() else None
+            yield database, journal
+            if shared is not None:
+                current = shared_path.stat()
+                held = os.fstat(shared.fileno())
+                if (current.st_dev, current.st_ino) != (held.st_dev, held.st_ino):
+                    raise PlatformError("Database lock source was replaced during read")
+        except OSError:
+            raise PlatformError("Database is writing or its read-only lock files are unavailable; retry when quiescent") from None
+
+
+def native_executable(path):
+    if not path.is_file() or not os.access(path, os.X_OK):
+        return False
+    with path.open("rb") as stream:
+        magic = stream.read(4)
+    return magic in {b"\x7fELF", b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xca\xfe\xba\xbf"}
+
+
+def process_owned(provider, executable=None):
+    """Names only. Every Node instance conservatively blocks a Node provider."""
+    names = {provider, Path(executable).name if executable else provider}
+    if provider in ("pi", "gemini") or executable and Path(executable).name in ("node", "nodejs"):
+        names.update(("node", "nodejs"))
+    try:
+        result = subprocess.run(["/bin/ps", "-A", "-o", "pid=,comm="], stdin=subprocess.DEVNULL,
+                                capture_output=True, timeout=6, shell=False)
+        if result.returncode or len(result.stdout) > 1024 * 1024:
+            return None
+        lines = result.stdout.decode("utf-8", "strict").splitlines()
+        if not lines or len(lines) > 20000:
+            return None
+        for line in lines:
+            pid, name = line.strip().split(maxsplit=1)
+            if not pid.isdigit() or not name:
+                return None
+            if int(pid) != os.getpid() and Path(name).name in names:
+                return True
+        return False
+    except (OSError, ValueError, UnicodeError, subprocess.TimeoutExpired):
+        return None
+
+
+class PlatformError(ValueError):
     """Fixed messages only; key-store errors and key material are never logged."""
 
 
@@ -103,6 +208,8 @@ def linux_key(identity, create=False):
         if saved.returncode or linux_key(identity) != key:
             raise PlatformError("Could not create the Hub Secret Service key; no unencrypted state was saved")
         return key
+    except PlatformError:
+        raise
     except (OSError, subprocess.TimeoutExpired, ValueError):
         raise PlatformError("Hub Secret Service is unavailable or invalid; unlock the desktop keyring and retry") from None
 
@@ -131,5 +238,7 @@ def protect(data, root, decrypt=False):
             return AESGCM(key).decrypt(nonce, data[len(HEADER) + 12:], aad)
         nonce = secrets.token_bytes(12)
         return HEADER + nonce + AESGCM(key).encrypt(nonce, data, aad)
+    except PlatformError:
+        raise
     except (InvalidTag, ValueError):
         raise PlatformError("Encrypted state could not be opened; preserve state and its original keyring key") from None
