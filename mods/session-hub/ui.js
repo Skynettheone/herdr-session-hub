@@ -49,6 +49,7 @@ export function renderPanel(v, cx, rawTheme) {
     .child(text(v.settings ? "History settings" : "History",t.foreground,14).font_semibold())
     .when(!v.settings, e => e.child(badge(String(v.data.total))))
     .child(div().flex_1())
+    .when(!!v.overlay,e=>e.child(button("dock-sidebar","Dock as side panel",cx=>v.dockSidebar(cx),{icon:"sidebar",iconOnly:true})))
     .child(button("refresh", v.busy ? "Working" : "Refresh history", cx => v.refresh(cx), {icon:"refresh",iconOnly:true}))
     .child(button("settings", "History settings", cx => { v.settings = !v.settings; v.detail = null; cx.notify(); }, {icon:"settings",iconOnly:true,selected:v.settings})));
   if (v.error) root.child(h_flex().px(13).py(9).gap(8).items_center().bg(t.surface).border_b_1().border_color(t.border)

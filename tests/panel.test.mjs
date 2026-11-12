@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
-import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability } from '../mods/session-hub/model.js';
+import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability, sidebarLayout } from '../mods/session-hub/model.js';
 
 test('literal transcript display, grouping, pagination and safe local launch', () => {
   assert.equal(safeText('hello\u202e\x1b; $(x)'), 'hello; $(x)');
@@ -14,7 +14,7 @@ test('literal transcript display, grouping, pagination and safe local launch', (
 });
 
 // The host mock checks behavior after deferred actions, not only initial render.
-async function panel(initialHook) {
+async function panel(initialHook,props={}) {
   const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[], artwork=[];
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
@@ -46,7 +46,11 @@ async function panel(initialHook) {
     timer:{after(_ms,fn){pending.push(Promise.resolve().then(()=>fn(cx)));}},stop_propagation(){},write_to_clipboard(t){clipboard.push(t);}};
   const host = {
     appHome:()=> 'C:/isolated', focused:()=>({space:'local'}), spaces:()=>[{id:'local',machine:null}], theme:()=>palette,
-    readTextFile:async()=>JSON.stringify({schema:1,python:'python.exe',helper:'C:/helper.py',state:'C:/hub-state',base:'C:/'}),
+    props:()=>props,
+    layout:()=>({id:'original',type:'block',theme:'community',content:{tab:'active'}}),
+    writeTextFile:async(path,text,expected)=>{requests.push({action:'write-layout',path,text,expected});},
+    closeOverlay:id=>runs.push({name:'closeOverlay',args:{id}}),
+    readTextFile:async path=>path.includes('/layouts/')?null:JSON.stringify({schema:1,python:'python.exe',helper:'C:/helper.py',state:'C:/hub-state',base:'C:/'}),
     pickFolder:async()=> 'C:/Chosen folder',
     knownAgents:async()=>[{key:'claude',name:'Claude Code',icon:'icons/claude.svg',tint:false,run:['claude'],installed:true},
       {key:'cursor',name:'Cursor',icon:'icons/cursor.svg',tint:true,run:['agent'],installed:false},
@@ -76,7 +80,7 @@ async function panel(initialHook) {
   await ui.link(name=>sources[name]);await ui.evaluate();sources['./ui.js']=ui;
   const module=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/main.js',import.meta.url),'utf8'),{context});
   await module.link(name=>sources[name]);await module.evaluate();
-  const view=new module.namespace.default();view.init({},cx);
+  const view=new module.namespace.default();view.init(props,cx);
   // init also starts an intentional command stream that remains pending.
   await pending[0]; await pending[1]; pending.splice(0,3);
   async function flush(){while(pending.length){const p=pending.shift();await p;}}
@@ -196,4 +200,23 @@ test('native agent catalog retains custom agents and renders original artwork',a
   assert.equal(p.view.agents.find(a=>a.key==='custom-agent').history,false);
   assert.match(historyCapability(agentCatalog([{key:'amp',run:['amp']}])[0]),/unavailable/);
   await p.click('connect-gemini');assert.equal(p.view.formProvider,'gemini');
+});
+
+test('sidebar docking preserves the original tree and creates only a personal layout',async()=>{
+  const original={id:'root',type:'row',theme:'custom',toast:'personal-toast',children:[{id:'session-hub-sidebar',type:'block',content:{mod:'spaces'}},{id:'work',type:'block',content:{tab:'active'}}]};
+  const before=JSON.stringify(original),result=sidebarLayout(original);
+  assert.equal(JSON.stringify(original),before);
+  assert.deepEqual(result.layout.children[1],original);
+  assert.notEqual(result.layout.children[0].id,'session-hub-sidebar');
+  assert.equal(result.layout.toast,'personal-toast');
+  assert.equal(sidebarLayout(result.layout).existing,result.layout.children[0].id);
+  const hidden={id:'root',type:'row',children:[{id:'tabs',type:'stack',hidden:true,children:[{id:'history',type:'block',hidden:true,content:{mod:'session-hub'}}]}]};
+  assert.ok(sidebarLayout(hidden).reveal.some(a=>a.name==='layout.select'&&a.args.stack==='tabs'&&a.args.child==='history'));
+  assert.ok(sidebarLayout(hidden).reveal.some(a=>a.name==='layout.show'&&a.args.id==='tabs'));
+  const p=await panel(undefined,{overlay:'mod-session-hub'});await p.click('dock-sidebar');
+  const write=p.requests.find(r=>r.action==='write-layout');
+  assert.equal(write.path,'C:/isolated/layouts/session-hub-workspace.json');
+  assert.equal(write.expected,null);
+  assert.ok(p.runs.some(r=>r.name==='layout.switch'&&r.args.name==='session-hub-workspace'));
+  assert.ok(p.runs.some(r=>r.name==='closeOverlay'));
 });

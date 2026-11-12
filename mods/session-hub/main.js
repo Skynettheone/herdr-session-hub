@@ -1,11 +1,12 @@
 import { View } from "gpui-kit";
 import { InputState } from "gpui-base";
-import { appHome, readTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents } from "herdr";
-import { safeText, requestFor, launchArgs, agentCatalog } from "./model.js";
+import { appHome, readTextFile, writeTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents, layout, closeOverlay, props as modProps } from "herdr";
+import { safeText, requestFor, launchArgs, agentCatalog, sidebarLayout } from "./model.js";
 import { renderPanel } from "./ui.js";
 
 export default class SessionHub extends View {
   init(_props, cx) {
+    this.overlay = _props?.overlay || modProps()?.overlay;
     this.query = ""; this.provider = "all"; this.profile = "";
     this.archived = false; this.removed = false; this.fullText = false; this.oldest = false;
     this.offset = 0; this.scanning = false; this.data = { rows: [], total: 0, profiles: [], statuses: [] };
@@ -80,6 +81,32 @@ export default class SessionHub extends View {
     if (!response.ok) throw new Error(response.error || "Local operation failed");
     if (result.code !== 0) throw new Error("The helper exited with an error");
     return response.result;
+  }
+
+  dockSidebar(cx) {
+    if(this.busy)return;
+    this.busy=true;this.error="";cx.notify();
+    cx.spawn(async cx=>{
+      try {
+        const target=sidebarLayout(layout());
+        if(target.existing)for(const action of target.reveal)run(action.name,action.args);
+        else {
+          let name="";
+          for(let n=1;n<=100;n++) {
+            const candidate="session-hub-workspace"+(n===1?"":"-"+n);
+            const path=appHome()+"/layouts/"+candidate+".json";
+            if(await readTextFile(path)!==null)continue;
+            // CAS-create only. A race never overwrites another person's layout.
+            await writeTextFile(path,JSON.stringify(target.layout,null,2),null);
+            name=candidate;break;
+          }
+          if(!name)throw new Error("Choose a new personal layout name; existing layouts were preserved");
+          run("layout.switch",{name});
+        }
+        if(this.overlay)closeOverlay(this.overlay);
+      } catch(error){this.error=safeText(error.message,400);}
+      finally{this.busy=false;cx.notify();}
+    });
   }
 
   perform(cx, request, then) {
