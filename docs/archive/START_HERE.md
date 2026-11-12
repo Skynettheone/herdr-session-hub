@@ -1,4 +1,7 @@
-# Herdr Session Hub — GitHub setup
+# Archived starter setup
+
+Historical project scaffolding. Use the current [README](../../README.md) and
+[agent install guide](../INSTALL_WITH_AGENT.md) for the working implementation.
 
 **Implementation update (2026-11-12):** the native mod, helper, tests and local
 development packaging now exist. Read README.md and docs/FEATURE_STATUS.md for

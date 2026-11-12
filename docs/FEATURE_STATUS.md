@@ -1,7 +1,7 @@
 # F01–F16 implementation status — 2026-11-12
 
 “Implemented” below means code and stated tests exist. It does not mean all native
-provider acceptance gates passed. This is **0.1.0-dev**, not a production release.
+provider acceptance gates passed. This is **0.1.0-rc.1**, an unpublished candidate.
 The user now requires macOS/Linux ports before readiness. Portable helper,
 key-store, source-lock, installer and package paths exist, with POSIX native
 continuation disabled until desktop acceptance. See PORT_ACCEPTANCE.md.
@@ -52,7 +52,7 @@ requested origin were explicitly authorized.
 
 `version.json` keeps `releaseReady=false`. `build-release.ps1` refuses normal
 release mode until changed after evidence is recorded. `-AllowUnverified` builds
-only an accurately named development bundle.
+only an accurately named release-candidate bundle.
 
 ## Expanded agent support
 

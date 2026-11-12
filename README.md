@@ -1,77 +1,134 @@
-# Herdr Session Hub
+<p align="center">
+  <a href="https://herdr.dev"><img src="mods/session-hub/assets/herdr-logo.svg" width="88" height="88" alt="Herdr sheep logo"></a>
+</p>
+<h1 align="center">Herdr Session Hub</h1>
+<p align="center">Your local sessions and recorded usage, together in Herdr.</p>
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <a href="https://herdr.dev"><img src="https://img.shields.io/badge/Herdr-0.1.15-30363d" alt="Herdr 0.1.15"></a>
+  <a href="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/ci.yml"><img src="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/ci.yml/badge.svg" alt="Platform checks"></a>
+  <a href="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/codeql.yml"><img src="https://github.com/Skynettheone/herdr-session-hub/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <img src="https://img.shields.io/badge/version-0.1.0--rc.1-8b5cf6" alt="0.1.0-rc.1 candidate">
+</p>
+<p align="center"><a href="#install">Install</a> · <a href="#history-and-usage">Features</a> · <a href="#compatibility">Compatibility</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
 
-A native Herdr Desktop history panel for Claude Code, Codex, OpenCode, Pi, Gemini
-and Copilot, with a live capability catalog for every Herdr agent.
+![Session Hub running in Herdr](preview.png)
 
-The same panel also has a native **Usage** view: themed token/cost graphs,
-provider/profile and UTC range filters, cache metrics, model/day/project
-breakdowns, local exact-model rates and timestamped recorded limit snapshots.
-It reads local numeric history only; estimates are not subscription bills and
-missing coverage/prices stay explicit. [Usage guide](docs/USER_GUIDE.md#recorded-usage)
-and [acceptance evidence](docs/USAGE_ACCEPTANCE.md) describe the verified scope.
+A native Herdr Desktop mod for finding, searching, organizing and continuing local
+coding-agent sessions. **History** and **Usage** share one collapsible tab beside
+**Files** and **Changes**, with Herdr's own colors, agent icons and theme behavior.
+The captures use synthetic histories; no personal conversations are shown.
 
-**Development candidate — not production-ready.** The implementation and local
-test suite are present. Native Herdr continuation passed for Claude, Codex,
-OpenCode, Pi and Gemini using disposable sessions and a loopback model fixture.
-Real-cloud Claude continuation and Herdr update/rollback also passed. Native
-control combinations are not exhaustively certified; distinct company-account
-identity isolation remains unverified. Manual security
-assessment and regression fixes are documented; it is not an independent audit. Production installation
-and publication have not been performed.
+## Install
 
-The accepted release goal now includes **Linux x64 and Apple Silicon macOS**
-alongside Windows x64. Portable encrypted state, filesystem/process/SQLite guards,
-offline installers and platform CI are implemented. macOS/Linux native Herdr GUI
-and provider continuation acceptance remain pending; continuation is explicitly
-disabled there. Intel macOS has no compatible wheel for the pinned encryption
-version. [Port scope and acceptance](docs/PORT_ACCEPTANCE.md) separates tested
-helper behavior from the remaining desktop checks. No additional desktops are
-available in this session, so the production gate remains closed.
+Ask the agent running in Herdr:
 
-Session Hub discovers explicit local roots, searches metadata and opted-in text,
-groups projects, previews plain conversation text, and stores aliases/archive
-flags separately from originals. Hub state is encrypted with Windows DPAPI.
-The native layout uses compact rows, responsive master/detail navigation and
-Herdr semantic colors and official icons for built-in and community themes. Dark,
-light and a custom community-format theme were checked in the native GUI.
-Portable encrypted metadata bundles have dry-run import and conflict handling.
-Native resume requests use explicit profile directories, original cwd and argv
-arrays. OpenCode reads its installed-version SQLite schema without starting the
-CLI, projects committed WAL frames in memory and refuses open writers. Oversized and compressed histories have
-bounded reads and visible partial coverage.
+```text
+Read ~/.config/herdr-app/AGENTS.md, then add this mod:
+https://github.com/Skynettheone/herdr-session-hub
+Follow its RECIPE.md and preserve my existing layouts, shortcuts and provider histories.
+```
 
-| Capability | Status |
-|---|---|
-| F01–F04 discovery, history, metadata search, filters | Implemented; six history adapters fixture-tested |
-| F05 native continuation | Four primary CLIs and Gemini passed native GUI context checks with a local fixture; duplicate/native-active cases fail closed |
-| F06–F11 refresh, layout preservation, roots, preview, grouping, profiles | Implemented; isolated 0.1.14→0.1.15 update, rollback and re-update passed |
-| F12 full-text search | Opt-in encrypted local FTS5; bounded incremental coverage |
-| F13–F14 archive and aliases | Hub-only, reversible |
-| F15 removal / original delete | Hub removal implemented; original deletion unavailable |
-| F16 portability / sync | Encrypted metadata file exchange implemented; native restore and remote sync unavailable |
+The agent must review the helper and installers, explain what they read/run, and
+use a verified bundle for your platform. **Copying only `mods/session-hub` is not
+sufficient**: the Python runtime and `runtime.json` must also be configured.
+[Agent installation guide](docs/INSTALL_WITH_AGENT.md) · [Recipe](RECIPE.md)
 
-See the full [F01–F16 status and release gates](docs/FEATURE_STATUS.md),
-[current readiness and remaining limits](docs/PRODUCTION_READINESS.md),
-[test evidence](docs/TEST_RESULTS.md), [security findings](docs/SECURITY_REVIEW.md),
-[pinned upstream review](docs/UPSTREAM_REVIEW.md) and [user guide](docs/USER_GUIDE.md).
+No release or gallery listing has been published yet. This repository is preparing
+`0.1.0-rc.1`; obtain a verified candidate bundle or build one from source. The
+compatibility limits below remain in force.
 
-Tested environment: Windows 11, Herdr 0.1.15, herdr-core 0.1.20, CPython 3.14.3,
-SQLite 3.50.4, Node 24.14.1 (tests only). CLI help/version probes: Claude 2.1.322,
-Codex 0.164.0, OpenCode 1.3.17, Pi 1.1.0, Gemini 0.49.0. Copilot is a missing-CLI shim; its native continuation
-is disabled. Cursor, Amp and other Herdr/custom agents are recognized with honest
-unavailable-history status when no verified offline adapter exists. This does not
-imply continuation acceptance for those additional providers. macOS/Linux bundles
-are experimental ports; UNC, WSL history roots and network mounts are unsupported.
+### From a verified bundle
 
-For a synthetic isolated demo or a local development bundle, follow
-[CONTRIBUTING.md](CONTRIBUTING.md). Install/uninstall/upgrade/rollback instructions
-are in the [user guide](docs/USER_GUIDE.md). The installer requires an explicit
-production-install switch and uses `place=none`; it does not replace layouts.
-Open History, then click **Dock** to add one **History** tab beside **Files** and
-**Changes** in a new personal layout copy. Click History again, or its collapse
-button, to hide it. Your existing layout and shipped header stay available.
+Requires **Herdr 0.1.15** and **CPython 3.14**. Compare the ZIP's SHA-256 with a
+trusted receipt, extract it, review the files, then close Herdr before installing.
 
-This is a trusted mod. There is no runtime telemetry or network client. A native
-provider may use its own hooks and network after a user requests resume. Read
-[SECURITY.md](SECURITY.md) before installing. No credentials are read, copied,
-merged or exported by Hub. MIT license; dependency notices are included separately.
+Windows PowerShell:
+
+```powershell
+pwsh -NoProfile -File scripts/install.ps1 -AppHome "$HOME/.config/herdr-app" -InstallProduction
+herdr-app do mod.open --name session-hub
+```
+
+Linux x64 / Apple Silicon macOS candidates:
+
+```sh
+python3.14 -I -B scripts/install.py install --app-home "$HOME/.config/herdr-app" --install-production
+herdr-app do mod.open --name session-hub
+```
+
+Linux needs `secret-tool` and an unlocked Secret Service; macOS needs an unlocked
+Keychain. The installer uses offline, hash-locked dependencies, keeps an upgrade
+backup and leaves your layout/keys untouched. Click **Dock** in History to add its
+tab through a new personal layout copy. Click the tab again to collapse it.
+
+For a disposable test install, omit the production switch and choose a child of
+the bundle parent's `.dev` directory. [Setup, upgrade, rollback and uninstall](docs/USER_GUIDE.md)
+
+## History and Usage
+
+- **Find old sessions.** Explicit provider profiles, custom roots, project groups,
+  metadata search and opt-in local full-text search.
+- **Continue in context.** Supported Windows providers open their native session
+  in a new Herdr tab, using the selected profile and recorded project directory.
+- **Keep originals intact.** Previews are read-only. Names, archive flags and
+  removal/restore live in Hub metadata.
+- **Understand recorded usage.** Native token/cache graphs, UTC date ranges,
+  provider/profile filters, model/day/project breakdowns and session averages.
+- **Price only what is known.** Exact local model rates or recorded provider
+  costs; unknown prices and incomplete coverage stay visible.
+- **Fit your workspace.** Responsive narrow/wide layouts, collapse controls,
+  keyboard-friendly fields and semantic built-in/community theme colors.
+
+![Native Usage graphs with a community theme](docs/screenshots/usage-community.png)
+
+Usage is local recorded accounting. API-equivalent estimates are not subscription
+bills; recorded limit snapshots are not live account quotas.
+[Using History and Usage](docs/USER_GUIDE.md)
+
+## Compatibility
+
+| Platform | Local helper / encrypted state | Native Herdr continuation |
+|---|---|---|
+| Windows 11 x64 | Verified | Verified for the versions below |
+| Linux x64 | Tested on Ubuntu 24.04, including Secret Service | Disabled pending native GUI/context acceptance |
+| Apple Silicon macOS | Tested on macOS 15, including Keychain | Disabled pending native GUI/context acceptance |
+| Intel macOS / other architectures | No accepted bundle | Unavailable |
+
+Verified Windows CLIs: **Claude Code 2.1.322**, **Codex 0.164.0**, **Pi 1.1.0**,
+**OpenCode 1.3.17**, **Gemini 0.49.0**, with Herdr GUI **0.1.15** / core **0.1.20**.
+Unknown versions, active ownership and ambiguous identities disable continuation.
+Gemini duplicate snapshots fail closed. Copilot history is experimental;
+continuation is unavailable. Other Herdr agents appear in the capability catalog
+without guessed history readers or launch commands.
+
+The macOS/Linux native GUI and continuation checks are still required before the
+requested cross-platform production scope is accepted. Those features remain
+guarded; the candidate label does not imply they have passed. UNC, WSL history
+roots and network mounts are unsupported.
+
+## Privacy and safety
+
+Hub has no runtime telemetry or HTTP client. It reads only configured roots;
+provider credentials are never read, copied or exported. State is encrypted with
+Windows DPAPI or a Hub-only Keychain/Secret Service key. Original deletion,
+native transcript migration and remote sync are unavailable. Encrypted metadata
+file exchange is supported, with dry-run import and conflicts preserved.
+
+Herdr mods are trusted code. Native provider CLIs can use their own hooks and
+network after you request continuation. Distinct company-account identities have
+not been verified. [Security policy](SECURITY.md) · [Dependency and artwork notices](THIRD_PARTY_NOTICES.md)
+
+## Source and verification
+
+Install bundles contain only runtime, matching wheels, installers, licenses and
+user documentation. Tests, build tools, fixtures and audit history stay in the
+[source repository](https://github.com/Skynettheone/herdr-session-hub).
+
+[Contributing](https://github.com/Skynettheone/herdr-session-hub/blob/main/CONTRIBUTING.md) ·
+[Test evidence](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/TEST_RESULTS.md) ·
+[Release receipts](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/RELEASE_REPORT.md) ·
+[Port acceptance](https://github.com/Skynettheone/herdr-session-hub/blob/main/docs/PORT_ACCEPTANCE.md)
+
+MIT licensed. Herdr artwork and the scoped native header adapter retain their
+Apache-2.0 notices. This community mod is not endorsed by Herdr.

@@ -1,3 +1,5 @@
+Archived implementation prompt; not current installation instructions. See README.md and docs/INSTALL_WITH_AGENT.md in the repository root.
+
 Build Herdr Session Hub in this repository for the native Windows Herdr GUI. Read root AGENTS.md, CODEX_HANDOVER.md, docs/REFERENCE_IMPLEMENTATIONS.md, docs/MIGRATION_AND_REFRESH_DESIGN.md, docs/VERIFIED_SOURCES.md, docs/PRODUCT_REQUIREMENTS.md, docs/CODEX_MASTER_PROMPT.md and ALL remaining docs before implementing.
 
 REQUIRED UPSTREAM SOURCE REVIEW FIRST:

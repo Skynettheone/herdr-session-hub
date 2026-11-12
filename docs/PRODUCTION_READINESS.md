@@ -9,7 +9,7 @@ in this environment. POSIX continuation stays disabled. See PORT_ACCEPTANCE.md
 for exact targets and evidence. `releaseReady=false` remains correct; scope
 selection itself is no longer the outstanding decision.
 
-The candidate is verified for the scope below, but remains **0.1.0-dev**. This
+The candidate is verified for the scope below, but remains **0.1.0-rc.1**. This
 inventory supersedes historical open-task lists; it separates defects we can
 fix locally from unavailable evidence and deliberate capability boundaries.
 Production installation, a release tag, and gallery publication remain separate

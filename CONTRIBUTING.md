@@ -33,12 +33,16 @@ Prepare the three exact binary wheels under `.research/wheels/`:
 pwsh -NoProfile -File scripts/build-release.ps1 -AllowUnverified
 ```
 
-This deliberately creates a **development** bundle while `releaseReady=false`.
+This creates a **candidate install** bundle while `releaseReady=false`.
 The release builder refuses a normal release until gates in FEATURE_STATUS.md
 are closed. It excludes research sources, state, personal runtime config,
 environments and transcripts. Windows x64 wheel hashes are not portable to
 other Python/platform combinations. Test other targets before adding lockfiles.
 
+Install payloads use a shared explicit allowlist: runtime, matching offline wheels,
+platform installers, licenses, README/recipe and user guides. Tests, build tools,
+audit documents, extra captures, starter prompts and development dependencies stay
+in the source repository. The verifier rejects even manifested extra files.
 The builder verifies staging and a fresh ZIP extraction. Install only from the
 verified extracted bundle; the source checkout has no release manifest/wheelhouse.
 For a disposable installation, choose an app home below the **bundle parent's**
@@ -53,7 +57,7 @@ or `requirements-macos-arm64.lock`. Only explicit target-matching binary wheels
 are accepted. Prepare those exact wheels under `.research/ports/wheels/<target>`
 using `pip download --only-binary=:all: --require-hashes -r <lock> --dest <folder>`
 on that target (or pass pip's explicit platform/ABI options when cross-downloading).
-Then prepare an **experimental** source/wheel bundle from the checkout:
+Then prepare an **experimental** install bundle from the checkout:
 
 ```sh
 python -I -B scripts/build-port-bundle.py --target linux-x64 --allow-unverified

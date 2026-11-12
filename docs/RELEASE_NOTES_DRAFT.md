@@ -20,7 +20,7 @@ continuation remains disabled:** real Herdr GUI/context acceptance is unavailabl
 Intel macOS has no compatible wheel for the pinned encryption version.
 
 The user requires both ports before production readiness. This candidate remains
-`0.1.0-dev / releaseReady=false`; these notes are not an announcement or permission
+`0.1.0-rc.1 / releaseReady=false`; these notes are not an announcement or permission
 to publish. No production configuration was an installation target. Check current
 artifact receipts in RELEASE_REPORT.md and scope in PORT_ACCEPTANCE.md before any
 later publication decision. Obtain explicit approval before installing into the

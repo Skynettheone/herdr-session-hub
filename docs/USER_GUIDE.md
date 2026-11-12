@@ -1,6 +1,6 @@
 # Using Session Hub
 
-This build is a development candidate. Four primary CLIs passed native Herdr
+This build is the 0.1.0-rc.1 candidate. Four primary CLIs passed native Herdr
 continuation with disposable histories and a loopback model fixture. Herdr
 update/rollback passed in an isolated installation. Cloud-account isolation and
 independent security review remain unverified. Keep a separate metadata backup.
@@ -17,7 +17,7 @@ Linux x64 and Apple Silicon macOS setup is described separately afterward; those
 ports keep native provider continuation disabled pending desktop acceptance.
 
 Python 3.14 x64, Herdr 0.1.15 and the provider CLIs must be installed separately.
-The offline development bundle contains pinned Windows encryption wheels.
+The offline install bundle contains pinned encryption wheels for its platform.
 Use a fresh extracted bundle. Installation validates every manifest entry and
 requires all runtime files and wheels before writing the app home. Comparing the
 ZIP hash with a trusted release receipt establishes integrity; a hash inside an

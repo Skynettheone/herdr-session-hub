@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.1.0-dev — 2026-11-12
+## 0.1.0-rc.1 — 2026-11-12 (unpublished)
+
+- Refresh the README with official artwork, genuine History/Usage captures,
+  compatibility badges, install snippets and a gallery-style agent prompt.
+- Expand the recipe and agent guide with actual helper/runtime installation,
+  access disclosures, layout preservation, name conflicts and capability guards.
+- Make install bundles lean and platform-specific through one shared allowlist;
+  keep tests, audit history, build tools and archived starter prompts in source.
+
+## Earlier development work
 
 - Add experimental Linux x64 and Apple Silicon macOS ports: native Keychain /
   Secret Service encryption, private state, portable locks, cooperative read-only

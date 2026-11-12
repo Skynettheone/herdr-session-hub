@@ -160,3 +160,17 @@ PORTABILITY_DESIGN.md records the platform interfaces, available Linux test
 environment and missing native desktop acceptance. Preserve Windows behavior;
 implement and test portable boundaries without turning missing key stores,
 unknown ownership or unlocked SQLite copies into apparent success.
+
+## Gallery presentation and install payload — 2026-11-12
+
+Reviewed the official gallery/agent guide and the Kiosk/Agenttrail public install
+examples. Confirmed pattern: read the installed Herdr guide, recipe and code;
+explain filesystem/process access; preserve existing mods/layouts/keys; validate
+before activation. The README will use a repository install prompt, not invent
+an unpublished gallery or release URL. Existing official sheep artwork and real
+sanitized captures are reused with their notices.
+
+Prepare 0.1.0-rc.1 install-only bundles with explicit file allowlists; keep tests,
+maintainer/audit documentation and old implementation prompts in source/history,
+not in consumer payloads. Do not delete private test/sign-in homes or originals.
+Candidate naming does not clear the outstanding POSIX native acceptance gate.
