@@ -4,13 +4,15 @@ This is a Windows development candidate. The following evidence supersedes
 previous pending-continuation/updater notes. Production configuration was not an
 installation target; no real user transcript was used or deleted.
 
-- Python regression suite: 46 tests passed in 25.339 seconds; the subsequently
-  added persisted-WAL writer-exclusion regression also passed (47 total tests).
-  The final bundle build repeats the full suite.
+- Python regression suite: **47 passed** in the final bundle build (16.951 seconds),
+  including persisted-WAL writer exclusion. Hosted Windows CI also passed all 47.
 - Native-host panel suite: 10 groups passed, including async search/refresh races,
   error paths, separate panes, focused shortcuts, catalog artwork and safe sidebar
   layout creation/reveal.
-- Ruff 0.17.4 correctness checks (`F`, `E9`): passed.
+- Ruff 0.17.4 correctness checks (`F`, `E9`), installed native SDK check and offline
+  wheel hash verification: passed. Disposable install/upgrade/uninstall smoke passed.
+- Final development ZIP: **91 files** verified in staging and fresh extraction;
+  filename/hash are in RELEASE_REPORT.md.
 - Native GUI: real search, filters, preview, settings, multiple panes, 420px narrow
   navigation and dark/light/custom-community themes passed the recorded smoke
   checks. Exhaustive controls in every theme remain unverified.
@@ -46,6 +48,14 @@ Two earlier queued runs had zero jobs and no downloadable logs. Fresh manual
 dispatches completed successfully. These results cover that exact commit;
 final-change CI results are recorded below after the source push. CodeQL job
 completion is not a claim of no alerts or an independent security audit.
+
+Final code commit `c95dfc739182d9f720bc2f9e1941d592ab13f55c`:
+
+- [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43139904187): **success**, 47 Python tests and 10 panel groups.
+- [Combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43139904383): **success**.
+
+Subsequent documentation-only result commits do not change the tested code and
+are intentionally outside workflow path filters.
 
 CI remains one relevant-change Windows fixture/lint/panel job and one main-branch
 combined CodeQL job, with cancellation of stale runs. No deployment or publication

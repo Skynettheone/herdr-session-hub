@@ -26,6 +26,9 @@ logs booleans/counts, never request bodies. It is not part of mod runtime or CI.
 Docking uses compare-and-create for a new personal layout and preserves the
 existing tree/files. Actual update/rollback retained 42 checked files. No production
 installation, original deletion, credential transfer or release publication occurred.
+Final combined CodeQL on `c95dfc7` completed successfully; the repository alert
+API reported **0 open code-scanning alerts** afterward. That is a point-in-time
+scanner result, not proof of absence of vulnerabilities or an independent audit.
 
 ## Findings corrected during implementation
 

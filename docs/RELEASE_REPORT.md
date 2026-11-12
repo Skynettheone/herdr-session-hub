@@ -21,8 +21,8 @@ publication or original-history deletion was performed.
   Re-update to 0.1.15 passed. See NATIVE_ACCEPTANCE.md.
 - Fixture/panel/correctness checks, native SDK check, install/backup/uninstall
   smoke and offline wheel verification are required by the local release process.
-- Hosted Windows and combined CodeQL on `57e2c4c` succeeded. Final-code run links
-  are in TEST_RESULTS.md after the next source push.
+- Hosted Windows and combined CodeQL on `c95dfc7` both succeeded. Exact run links
+  are in TEST_RESULTS.md; later documentation-only commits do not change tested code.
 
 ## Local bundle
 
@@ -42,3 +42,23 @@ that ZIP, to avoid a checksum/report cycle.
 The previous bundle `herdr-session-hub-0.1.0-dev-windows-x64-20261111203312.zip`
 (82 files, SHA-256 `75dd9ce85597ce28e11b4a2384118bb0bd1ce938d78fdaa282ff9acffa044801`)
 is superseded by the native-acceptance bundle when listed below.
+
+## Verified native-acceptance development bundle
+
+`herdr-session-hub-0.1.0-dev-windows-x64-20261112021420.zip`, **4,576,153 bytes**.
+SHA-256: `f72968bc3a78b79b461ffd3b8f5ea143a2bb32a5d724a7ed38cda0b014349f77`.
+Both staged payload and fresh extraction verified **91 files**, with no development
+state, authentication data or runtime configuration included. This supersedes the
+previous bundle above; it remains local and was not published as a release.
+
+The bundle build passed Ruff, **47 Python tests** (16.951 seconds), **10 panel
+groups**, installed native SDK check and offline wheel hash verification. The
+10k-record list/search sample was 0.166 seconds. Offline first install, upgrade
+backup, uninstall dry-run, state retention, explicit Hub purge and layout/key/
+original-sentinel hashes passed separately in a disposable directory.
+
+Source task commits: `4d0bc05` (native resume/snapshots), `8745cdc` (native sidebar),
+`c95dfc7` (acceptance/evidence). The final documentation-only result entry is
+external to the ZIP to avoid a checksum/report cycle. Post-build documentation
+also clarifies switching back to the original layout before uninstall; the
+installer/uninstaller code is unchanged from the tested bundle.

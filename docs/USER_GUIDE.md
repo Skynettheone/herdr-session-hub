@@ -201,6 +201,9 @@ pwsh -NoProfile -File scripts/uninstall.ps1 -AppHome "$HOME/.config/herdr-app" -
 
 The uninstaller targets only named Hub namespaces. Provider originals, auth,
 Herdr layouts and keys are untouched. Close any Hub pane through Herdr itself.
+Before uninstalling, select your original layout or remove the Hub pane in Herdr.
+The personal sidebar layout copy is retained because it also contains your
+workspace; remove that optional copy yourself only after choosing another layout.
 
 ## Herdr agent catalog, Gemini and Copilot
 
