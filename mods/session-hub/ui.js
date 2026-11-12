@@ -51,7 +51,8 @@ export function renderPanel(v, cx, rawTheme) {
     .child(div().flex_1())
     .when(!!v.overlay,e=>e.child(button("dock-sidebar","Dock as side panel",cx=>v.dockSidebar(cx),{icon:"sidebar",iconOnly:true})))
     .child(button("refresh", v.busy ? "Working" : "Refresh history", cx => v.refresh(cx), {icon:"refresh",iconOnly:true}))
-    .child(button("settings", "History settings", cx => { v.settings = !v.settings; v.detail = null; cx.notify(); }, {icon:"settings",iconOnly:true,selected:v.settings})));
+    .child(button("settings", "History settings", cx => { v.settings = !v.settings; v.detail = null; cx.notify(); }, {icon:"settings",iconOnly:true,selected:v.settings}))
+    .when(!!v.panel,e=>e.child(button("collapse-history","Collapse History",()=>v.collapsePanel(),{icon:"sidebar",iconOnly:true}))));
   if (v.error) root.child(h_flex().px(13).py(9).gap(8).items_center().bg(t.surface).border_b_1().border_color(t.border)
     .child(icon("alert",t.blocked)).child(text(v.error,t.blocked,11.5).flex_1())
     .child(button("dismiss-error","Dismiss error",cx=>{v.error="";cx.notify();},{icon:"close",iconOnly:true})));
@@ -186,7 +187,7 @@ export function renderPanel(v, cx, rawTheme) {
   }
 
   function settingsPane() {
-    const tabs=h_flex().px(12).py(9).gap(4).border_b_1().border_color(t.border);
+    const tabs=h_flex().px(12).py(9).gap(4).flex_wrap().border_b_1().border_color(t.border);
     for(const [id,name] of [["profiles","Profiles"],["agents","Agents"],["search","Search"],["portability","Portability"]]) tabs.child(button("settings-"+id,name,cx=>{v.settingsSection=id;cx.notify();},{selected:(v.settingsSection||"profiles")===id}));
     const body=v_flex().id("settings-body").flex_1().min_h(0).overflow_y_scrollbar().p(14).gap(12);
     const page=v.settingsSection||"profiles";

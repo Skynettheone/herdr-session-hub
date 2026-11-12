@@ -5,6 +5,17 @@ code is included or translated. Pinned research paths/licenses are in
 docs/UPSTREAM_REVIEW.md. Ignored downloaded research sources are not distributable
 inputs. SDK type files generated locally by Herdr checks are excluded.
 
+## Scoped Herdr header adapter
+
+`mods/session-hub/tabs.js` adapts the installed Herdr 0.1.15 native tabs header,
+from [herdrdev/herdr-app defaults/mods/tabs/main.js](https://github.com/herdrdev/herdr-app/blob/b22936225403f38f0e6f38dd2f2fe4b444a85988/defaults/mods/tabs/main.js).
+This file remains **Apache-2.0**, independently of this project's MIT license.
+The full Apache license is in `mods/session-hub/assets/HERDR-LICENSE.txt`.
+Changes expose functional view hooks and add one History toggle to the existing
+Files/Changes controls. Shipped native header files are never overwritten; this
+adapter is selected only in the new personal layout copy. Original copyright
+notices in the upstream distribution remain applicable.
+
 Offline Windows bundles include unmodified binary Python wheels. Each wheel
 contains its own full license/notices; retain those files when installing or
 redistributing it:

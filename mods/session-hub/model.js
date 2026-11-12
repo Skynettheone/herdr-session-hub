@@ -1,18 +1,27 @@
 // Pure panel state helpers; native host calls stay in the View instance.
 export const providers = ["all", "claude", "codex", "opencode", "pi", "copilot", "gemini"];
 export function sidebarLayout(value) {
-  const original = JSON.parse(JSON.stringify(value));
+  let original = JSON.parse(JSON.stringify(value));
   if (!original || typeof original !== "object" || !original.id || !original.type) throw new Error("Herdr did not return a valid layout");
+  // Upgrade only the exact wrapper created by older Hub builds, in a NEW copy.
+  if(original.id.startsWith("session-hub-layout") && original.children?.length===2 &&
+     original.children[0].id?.startsWith("session-hub-sidebar") && original.children[0].content?.mod==="session-hub") {
+    const wrapper=original;original=wrapper.children[1];
+    for(const [key,value] of Object.entries(wrapper))if(!["id","type","children"].includes(key))original[key]=value;
+  }
   const nodes = [];
   let existingRoute;
   const visit = (node, parents=[]) => {
     nodes.push(node);
     const route=[...parents,node];
-    if(!existingRoute&&node.content?.mod==="session-hub")existingRoute=route;
+    if(!existingRoute&&node.content?.mod==="session-hub"&&node.content?.props?.role!=="tabs")existingRoute=route;
     for (const child of node.children || []) visit(child,route);
   };
   visit(original);
-  if (existingRoute) {
+  const tabs=nodes.find(node=>node.id==="tabs"&&(node.content?.mod==="tabs"||(node.content?.mod==="session-hub"&&node.content?.props?.role==="tabs")));
+  const body=nodes.find(node=>node.id==="panel-body"&&node.type==="stack");
+  const panel=nodes.find(node=>node.id==="panel"&&node.children?.includes(body));
+  if (existingRoute && (!body?.children?.includes(existingRoute.at(-1)) || tabs?.content?.props?.role==="tabs")) {
     const reveal=[];
     for(let i=0;i<existingRoute.length;i++) {
       const node=existingRoute[i];reveal.push({name:"layout.show",args:{id:node.id}});
@@ -22,12 +31,13 @@ export function sidebarLayout(value) {
   }
   const ids = new Set(nodes.map(node => node.id));
   const unique = base => { let key=base, n=1; while(ids.has(key))key=base+"-"+(n++); ids.add(key); return key; };
-  const panel = {id:unique("session-hub-sidebar"),type:"block",size:{px:380},min:300,content:{mod:"session-hub"}};
-  const root = {id:unique("session-hub-layout"),type:"row",children:[panel,original]};
-  // Root-only settings remain effective; the complete source tree stays intact.
-  for (const key of ["theme","colors","font","ui_font","font_size","ui_font_size","terminal_padding","terminal_opacity","terminal_menu","toast","titlebar","background"])
-    if (key in original) root[key] = original[key];
-  return {layout:root};
+  if(!tabs||!body||!panel)throw new Error("This layout has no standard Files/Changes area. Open History as a dialog or use a compatible personal layout.");
+  const history=existingRoute?.at(-1)||{id:unique("session-hub-history"),type:"block",content:{mod:"session-hub",props:{panel:panel.id}}};
+  if(!existingRoute)body.children.push(history);
+  history.content.props={...history.content.props,panel:panel.id};
+  tabs.content={mod:"session-hub",props:{...tabs.content?.props,role:"tabs"}};
+  panel.hidden=false;body.active=history.id;
+  return {layout:original};
 }
 export function agentCatalog(native = []) {
   const catalog = new Map(native.filter(p => p?.key && Array.isArray(p.run)).map(p => [p.key, { ...p,

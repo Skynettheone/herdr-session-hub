@@ -45,7 +45,7 @@ if (-not (Test-Path -LiteralPath $wheelhouse -PathType Container)) { throw 'Miss
 if ($LASTEXITCODE -ne 0) { throw 'Pinned offline dependency installation failed' }
 $staging = Join-Path $modRoot ('.session-hub-stage-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $staging | Out-Null
-foreach ($name in @('main.js','model.js','ui.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination $staging }
+foreach ($name in @('main.js','model.js','ui.js','tabs.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination $staging }
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/icons') -Destination $staging -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/assets') -Destination $staging -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper') -Destination $staging -Recurse

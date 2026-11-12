@@ -3,10 +3,14 @@ import { InputState } from "gpui-base";
 import { appHome, readTextFile, writeTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents, layout, closeOverlay, props as modProps } from "herdr";
 import { safeText, requestFor, launchArgs, agentCatalog, sidebarLayout } from "./model.js";
 import { renderPanel } from "./ui.js";
+import { initTabs, renderTabs } from "./tabs.js";
 
 export default class SessionHub extends View {
   init(_props, cx) {
-    this.overlay = _props?.overlay || modProps()?.overlay;
+    const hostProps={...modProps(),..._props};
+    this.isTabHost=hostProps.role==="tabs";
+    if(this.isTabHost){initTabs.call(this);return;}
+    this.overlay=hostProps.overlay;this.panel=hostProps.panel;
     this.query = ""; this.provider = "all"; this.profile = "";
     this.archived = false; this.removed = false; this.fullText = false; this.oldest = false;
     this.offset = 0; this.scanning = false; this.data = { rows: [], total: 0, profiles: [], statuses: [] };
@@ -108,6 +112,8 @@ export default class SessionHub extends View {
       finally{this.busy=false;cx.notify();}
     });
   }
+
+  collapsePanel(){if(this.panel)run("layout.hide",{id:this.panel});}
 
   perform(cx, request, then) {
     if (this.busy) return;
@@ -236,5 +242,5 @@ export default class SessionHub extends View {
     if (!this.activeInput && event.key === "enter" && !this.detail && this.data.rows[this.selected]) this.choose(this.data.rows[this.selected], cx);
   }
 
-  render(cx) { return renderPanel(this, cx, theme()); }
+  render(cx) { return this.isTabHost?renderTabs.call(this,cx):renderPanel(this, cx, theme()); }
 }

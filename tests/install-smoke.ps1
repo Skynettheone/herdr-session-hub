@@ -8,7 +8,7 @@ $testHome=Join-Path $package '.dev/app'
 New-Item -ItemType Directory -Force -Path (Join-Path $package 'scripts'),(Join-Path $package 'wheelhouse'),(Join-Path $package 'mods/session-hub/helper'),(Join-Path $testHome 'layouts')|Out-Null
 foreach($name in @('version.json','requirements-windows.lock')){Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $package}
 foreach($name in @('install.ps1','uninstall.ps1','verify-package.py','check-native.ps1')){Copy-Item -LiteralPath (Join-Path $repo "scripts/$name") -Destination (Join-Path $package 'scripts')}
-foreach($name in @('main.js','model.js','ui.js','mod.json')){Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination (Join-Path $package 'mods/session-hub')}
+foreach($name in @('main.js','model.js','ui.js','tabs.js','mod.json')){Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination (Join-Path $package 'mods/session-hub')}
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper/hub.py') -Destination (Join-Path $package 'mods/session-hub/helper')
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper/adapters') -Destination (Join-Path $package 'mods/session-hub/helper') -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/icons') -Destination (Join-Path $package 'mods/session-hub') -Recurse

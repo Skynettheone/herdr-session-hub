@@ -4,6 +4,12 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability, sidebarLayout } from '../mods/session-hub/model.js';
 
+const nativeLayout=()=>({id:'root',type:'row',theme:'custom',toast:'personal-toast',children:[
+  {id:'sidebar',type:'block',content:{mod:'spaces'}},
+  {id:'work',type:'column',children:[{id:'tabs',type:'block',content:{mod:'tabs'}},
+    {id:'panel',type:'column',hidden:true,size:{px:368},children:[{id:'panel-body',type:'stack',active:'files',children:[
+      {id:'files',type:'block',content:{mod:'files'}},{id:'changes',type:'block',content:{mod:'changes'}}]}]}]}]});
+
 test('literal transcript display, grouping, pagination and safe local launch', () => {
   assert.equal(safeText('hello\u202e\x1b; $(x)'), 'hello; $(x)');
   assert.equal(groupRows([{cwd:'C:/a'}, {cwd:'C:/a'}, {}]).length, 2);
@@ -19,7 +25,7 @@ async function panel(initialHook,props={}) {
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
   let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',enabled:true,versionVerified:true,trustedProjects:[]}],statuses:[]};
-  let fail = false;
+  let fail = false, layoutState=nativeLayout();
   let listHook = async request => { if(initialHook) { const hook=initialHook;initialHook=null;await hook(request,view,cx); } };
   function element(initial) {
     let id=initial;
@@ -47,7 +53,8 @@ async function panel(initialHook,props={}) {
   const host = {
     appHome:()=> 'C:/isolated', focused:()=>({space:'local'}), spaces:()=>[{id:'local',machine:null}], theme:()=>palette,
     props:()=>props,
-    layout:()=>({id:'original',type:'block',theme:'community',content:{tab:'active'}}),
+    layout:()=>layoutState,
+    panes:()=>[],window:()=>({buttons:true,platform:'windows'}),shared:()=>null,settings:()=>({zoom:1}),openOverlay:()=>{},
     writeTextFile:async(path,text,expected)=>{requests.push({action:'write-layout',path,text,expected});},
     closeOverlay:id=>runs.push({name:'closeOverlay',args:{id}}),
     readTextFile:async path=>path.includes('/layouts/')?null:JSON.stringify({schema:1,python:'python.exe',helper:'C:/helper.py',state:'C:/hub-state',base:'C:/'}),
@@ -70,14 +77,16 @@ async function panel(initialHook,props={}) {
     },
     run:(name,args)=>runs.push({name,args}),
   };
-  const context=vm.createContext({console,JSON,Map,Set,Date,Error,String,Object,Array,Math,Promise});
+  const context=vm.createContext({console,JSON,Map,Set,Date,Error,String,Object,Array,Math,Promise,localStorage:{getItem:()=>null,setItem(){}}});
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
   const art = kind => path => {artwork.push({kind,path});return element();};
-  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image')}), 'gpui-base':synthetic({v_flex:element,h_flex:element,Button:{new:element},InputState:inputState,Input:{new:element}}),herdr:synthetic(host),'./model.js':model};
+  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image')}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(){}})},Button:{new:element},InputState:inputState,Input:{new:element}}),herdr:synthetic(host),'./model.js':model};
   await model.link(()=>{});await model.evaluate();
   const ui=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/ui.js',import.meta.url),'utf8'),{context});
   await ui.link(name=>sources[name]);await ui.evaluate();sources['./ui.js']=ui;
+  const tabs=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/tabs.js',import.meta.url),'utf8'),{context});
+  await tabs.link(name=>sources[name]);await tabs.evaluate();sources['./tabs.js']=tabs;
   const module=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/main.js',import.meta.url),'utf8'),{context});
   await module.link(name=>sources[name]);await module.evaluate();
   const view=new module.namespace.default();view.init(props,cx);
@@ -87,7 +96,7 @@ async function panel(initialHook,props={}) {
   await flush();
   function draw(){controls.clear();styles.length=0;view.render(cx);}
   async function click(id){draw();assert.ok(controls.has(id),`visible control ${id}`);controls.get(id)({},cx);await flush();draw();}
-  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,artwork,setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
+  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,artwork,setLayout(v){layoutState=v;},setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
 }
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{
@@ -202,14 +211,21 @@ test('native agent catalog retains custom agents and renders original artwork',a
   await p.click('connect-gemini');assert.equal(p.view.formProvider,'gemini');
 });
 
-test('sidebar docking preserves the original tree and creates only a personal layout',async()=>{
-  const original={id:'root',type:'row',theme:'custom',toast:'personal-toast',children:[{id:'session-hub-sidebar',type:'block',content:{mod:'spaces'}},{id:'work',type:'block',content:{tab:'active'}}]};
+test('History uses one collapsible Files/Changes panel in a preserved personal layout',async()=>{
+  const original=nativeLayout();
   const before=JSON.stringify(original),result=sidebarLayout(original);
   assert.equal(JSON.stringify(original),before);
-  assert.deepEqual(result.layout.children[1],original);
-  assert.notEqual(result.layout.children[0].id,'session-hub-sidebar');
+  assert.deepEqual(result.layout.children[0],original.children[0]);
+  const work=result.layout.children[1],body=work.children[1].children[0];
+  assert.deepEqual(body.children.slice(0,2),original.children[1].children[1].children[0].children);
+  assert.equal(work.children[0].content.props.role,'tabs');
+  assert.equal(body.children.filter(n=>n.content.mod==='session-hub').length,1);
+  assert.equal(body.active,'session-hub-history');
   assert.equal(result.layout.toast,'personal-toast');
-  assert.equal(sidebarLayout(result.layout).existing,result.layout.children[0].id);
+  assert.equal(sidebarLayout(result.layout).existing,'session-hub-history');
+  const upgraded=sidebarLayout({id:'session-hub-layout',type:'row',children:[{id:'session-hub-sidebar',type:'block',content:{mod:'session-hub'}},original]}).layout;
+  assert.equal(upgraded.id,'root');assert.equal(upgraded.children[1].children[1].children[0].children.length,3);
+  assert.throws(()=>sidebarLayout({id:'custom',type:'block',content:{tab:'active'}}),/no standard/);
   const hidden={id:'root',type:'row',children:[{id:'tabs',type:'stack',hidden:true,children:[{id:'history',type:'block',hidden:true,content:{mod:'session-hub'}}]}]};
   assert.ok(sidebarLayout(hidden).reveal.some(a=>a.name==='layout.select'&&a.args.stack==='tabs'&&a.args.child==='history'));
   assert.ok(sidebarLayout(hidden).reveal.some(a=>a.name==='layout.show'&&a.args.id==='tabs'));
@@ -219,4 +235,13 @@ test('sidebar docking preserves the original tree and creates only a personal la
   assert.equal(write.expected,null);
   assert.ok(p.runs.some(r=>r.name==='layout.switch'&&r.args.name==='session-hub-workspace'));
   assert.ok(p.runs.some(r=>r.name==='closeOverlay'));
+  const docked=await panel(undefined,{panel:'panel'});await docked.click('collapse-history');
+  assert.ok(docked.runs.some(r=>r.name==='layout.hide'&&r.args.id==='panel'));
+  const header=await panel(undefined,{role:'tabs'});header.draw();
+  assert.equal(header.requests.length,0,'header role never starts another history scan');
+  header.setLayout(result.layout);await header.click('panel-session-hub-history');
+  assert.ok(header.runs.some(r=>r.name==='layout.hide'&&r.args.id==='panel'));
+  work.children[1].hidden=true;await header.click('panel-session-hub-history');
+  assert.ok(header.runs.some(r=>r.name==='layout.select'&&r.args.child==='session-hub-history'));
+  assert.ok(header.runs.some(r=>r.name==='layout.show'&&r.args.id==='panel'));
 });

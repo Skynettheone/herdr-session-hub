@@ -25,7 +25,7 @@ try {
     foreach($folder in @('docs','scripts','tests')) { Copy-Item -LiteralPath (Join-Path $repo $folder) -Destination $stage -Recurse }
     $mod=Join-Path $stage 'mods/session-hub'
     New-Item -ItemType Directory -Force -Path (Join-Path $mod 'helper')|Out-Null
-    foreach($file in @('main.js','model.js','ui.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$file") -Destination $mod }
+    foreach($file in @('main.js','model.js','ui.js','tabs.js','mod.json')) { Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$file") -Destination $mod }
     Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/icons') -Destination $mod -Recurse
     Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/assets') -Destination $mod -Recurse
     Copy-Item -LiteralPath (Join-Path $repo 'mods/session-hub/helper/hub.py') -Destination (Join-Path $mod 'helper')
