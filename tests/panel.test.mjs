@@ -23,7 +23,7 @@ test('literal transcript display, grouping, pagination and safe local launch', (
 });
 
 // The host mock checks behavior after deferred actions, not only initial render.
-async function panel(initialHook,props={},savedPanels=null) {
+async function panel(initialHook,props={},savedPanels=null,legacy=false) {
   const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[], artwork=[], paths=[];
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
@@ -97,7 +97,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
   const art = kind => path => {artwork.push({kind,path});return element();};
-  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image'),PathBuilder:{fill:pathBuilder,stroke:pathBuilder},Background:{solid:()=>({opacity:()=>({})})}}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(index){this.last=index;}})},Button:{new:element},InputState:inputState,TextareaState:inputState,Input:{new:element},Textarea:{new:element}}),herdr:synthetic(host),'./model.js':model};
+  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image'),PathBuilder:{fill:pathBuilder,stroke:pathBuilder},Background:{solid:()=>({opacity:()=>({})})}}), 'gpui-base':synthetic({v_flex:element,h_flex:element,...(legacy?{}:{ScrollHandle:{new:()=>({scroll_to_item(index){this.last=index;}})}}),Button:{new:element},InputState:inputState,TextareaState:inputState,Input:{new:element},Textarea:{new:element}}),herdr:synthetic(host),'./model.js':model};
   await model.link(()=>{});await model.evaluate();
   const usage=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/usage.js',import.meta.url),'utf8'),{context});
   await usage.link(name=>sources[name]);await usage.evaluate();sources['./usage.js']=usage;
@@ -177,6 +177,12 @@ test('Usage stop preserves the completed batch and another refresh can finish',a
   assert.ok(p.view.notice.startsWith('Stopped'));
   p.setUsageHook(null);p.usageData.pending=0;await p.click('refresh');
   assert.equal(p.view.scanCancelled,false);assert.equal(p.view.usageData.pending,0);
+});
+
+test('older SDK without ScrollHandle still loads History, Usage and the header',async()=>{
+  const p=await panel(null,{},null,true);p.draw();assert.equal(p.view.usageScroll,null);
+  await p.click('view-usage');await p.click('usage-rate-0');assert.equal(p.view.usageFields.model.value(),'test-model');
+  const header=await panel(null,{role:'tabs'},null,true);header.draw();assert.equal(header.view.scroll,null);
 });
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{

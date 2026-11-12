@@ -42,7 +42,7 @@ export function renderUsage(v, cx, kit) {
     .child(h_flex().gap(6).child(input(v.usageFields.start,"usage-start").flex_1()).child(input(v.usageFields.end,"usage-end").flex_1()))
     .child(button("usage-apply-dates","Apply dates",cx=>v.loadUsage(cx),{primary:true})));
   pane.child(filters);
-  const body=v_flex().id("usage-body").flex_1().min_h(0).min_w(0).overflow_y_scrollbar().track_scroll(v.usageScroll).p(wide?20:12).gap(14);
+  const body=v_flex().id("usage-body").flex_1().min_h(0).min_w(0).overflow_y_scrollbar().when(!!v.usageScroll,e=>e.track_scroll(v.usageScroll)).p(wide?20:12).gap(14);
   if(!data) {
     if(v.usageLoading)return pane.child(body.child(section("Loading usage","Reading your local numeric cache…")));
     body.child(section("Your usage, on this computer","Explore tokens, cache activity and estimated cost from your configured history folders.")

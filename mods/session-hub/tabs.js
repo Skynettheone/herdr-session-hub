@@ -5,7 +5,8 @@
 // Original shipped tabs remain untouched. See assets/HERDR-LICENSE.txt
 // and THIRD_PARTY_NOTICES.md for licensing/provenance.
 import { div, svg, image } from "gpui-kit";
-import { h_flex, ScrollHandle } from "gpui-base";
+import { h_flex } from "gpui-base";
+import * as nativeBase from "gpui-base";
 import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
 
 function find(node, id) {
@@ -19,7 +20,7 @@ function find(node, id) {
 
 export function initTabs() {
     this.pressed = null;
-    this.scroll = ScrollHandle.new();
+    this.scroll = nativeBase.ScrollHandle?.new() || null;
     try {
       const saved=JSON.parse(localStorage.getItem("panels") ?? "{}");
       this.panels=saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{};
@@ -111,7 +112,7 @@ export function renderTabs() {
     return h_flex().size_full().min_w(0).px(10).pl(lightsPadding).gap(3).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .on_mouse_up("left", () => { this.pressed = null; })
       .on_scroll_wheel(e => { if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next"); })
-      .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().items_center().gap(3).overflow_x_scrollbar().track_scroll(this.scroll)
+      .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().items_center().gap(3).overflow_x_scrollbar().when(!!this.scroll,e=>e.track_scroll(this.scroll))
         .on_size_change((_size, cx) => { if (active >= 0) { this.scroll.scroll_to_item(active); cx.notify(); } })
         .children(shown.map(item)))
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
