@@ -1,71 +1,74 @@
 # Test results — 2026-11-12
 
-This is a Windows development candidate. The following evidence supersedes
-previous pending-continuation/updater notes. Production configuration was not an
-installation target; no real user transcript was used or deleted.
+This is a checked **0.1.0-dev Windows candidate**, not an unqualified production
+release. The F01–F16 implementation/limits are in FEATURE_STATUS.md. Native checks
+used disposable installations, histories and config homes; production config was
+not an installation target. Real cloud checks used only new synthetic prompts.
 
-- Python regression suite: **47 passed** in the final bundle build (16.951 seconds),
-  including persisted-WAL writer exclusion. Hosted Windows CI also passed all 47.
-- Native-host panel suite: 10 groups passed, including async search/refresh races,
-  error paths, separate panes, focused shortcuts, catalog artwork and safe sidebar
-  layout creation/reveal.
-- Ruff 0.17.4 correctness checks (`F`, `E9`), installed native SDK check and offline
-  wheel hash verification: passed. Disposable install/upgrade/uninstall smoke passed.
-- Final development ZIP: **91 files** verified in staging and fresh extraction;
-  filename/hash are in RELEASE_REPORT.md.
-- Native GUI: real search, filters, preview, settings, multiple panes, 420px narrow
-  navigation and dark/light/custom-community themes passed the recorded smoke
-  checks. Exhaustive controls in every theme remain unverified.
-- Four primary native CLIs: actual Hub-button continuation restored original
-  native IDs/cwd/selected profiles and prior context, followed by a new
-  `CONTINUITY_OK` response. Active ownership was detected for all four.
-- Real Herdr updater: 0.1.14→0.1.15, backup rollback to 0.1.14 and re-update passed.
-  39 mod/config/layout hashes survived update; 42 including encrypted Hub state
-  survived rollback. Unknown-SDK continuation was disabled while browsing worked.
-  Native status reported `errors: []` on restored and re-updated versions.
+## Automated checks
 
-See [NATIVE_ACCEPTANCE.md](NATIVE_ACCEPTANCE.md) for versions, isolation, method,
-archive checksums, native screenshots and limitations. The model backend was a
-loopback fixture; cloud-account personal/company isolation was not tested.
-Gemini continuation remains unverified; Copilot has no usable installed CLI.
+- **53 Python tests** and **11 native-host panel groups** passed locally and in
+  hosted Windows CI. Ruff correctness checks passed. Coverage includes oversized
+  and malformed histories, bounded compressed Codex rollouts, duplicate identity,
+  active-writer refusal, SQLite WAL snapshot consistency, shared-profile FTS
+  consent, argument/environment routing, interrupted state migration, hard links,
+  encrypted portability/tampering/conflicts and safe unavailable operations.
+- Installed Herdr SDK check passed with every checker home/config variable now
+  explicitly isolated under `.dev/native-sdk-check`. It is a load/render check,
+  not a substitute for native GUI interaction.
+- Offline wheel hashes and disposable install/upgrade-backup/uninstall checks
+  passed. The final bundle build/extraction results are in RELEASE_REPORT.md.
+- A 10k-record list/search sample took 0.483 seconds in the preceding build;
+  performance samples are machine/workload-specific, not guarantees.
 
-Regression coverage includes 10k records, Unicode/long paths, sparse >1 GiB files,
-malformed/partial JSONL, compressed/concatenated/corrupt Codex rollouts, duplicate
-identities, shared-profile FTS privacy, cross-chunk AND, explicit trust, executable
-version drift, source hashes, WAL checksums/commits/locking, atomic state recovery,
-interrupted schema updates, metadata encryption/tampering/conflicts and disabled
-dangerous operations. A 10k-record list/search page took 0.183 seconds in the local
-46-test run; this is a sample, not a performance guarantee.
+## Native acceptance
 
-## Hosted CI
+- Claude Code 2.1.322, Codex 0.164.0, OpenCode 1.3.17 and Pi 1.1.0 resumed through
+  the actual Hub button, retained native ID/profile/cwd and answered a fresh
+  context-dependent prompt. Real CLIs/stores used a deterministic loopback model.
+- Gemini 0.49.0 also passed native `--resume UUID` context/identity verification.
+  Its repeated-resume duplicate snapshots deliberately fail closed. This was not
+  a Google cloud-account test. See FOLLOWUP_ACCEPTANCE.md.
+- User-controlled Claude sign-ins authenticated two isolated stores with one
+  real identity. Both created separate real-cloud marker conversations; the
+  personal Hub launch returned its prior marker on a fresh prompt. An unsigned
+  third store had no auth fallback. A distinct company identity is unavailable.
+- Herdr 0.1.14→0.1.15 update, verified backup rollback and re-update passed.
+  Update retained 39 checked files; rollback retained 42 including encrypted Hub
+  state. This is the tested version pair, not future-API compatibility assurance.
+- Native History shares the right Files/Changes stack in a new personal layout;
+  both its header chip and internal collapse control worked. Old layouts,
+  shipped header, settings and keys remained unchanged. Removal/restore and
+  archive/unarchive passed on synthetic Pi; the original hash stayed unchanged.
+  Details, copy notices, filtering and narrow settings rendering were observed.
+- Earlier native smoke covers search/debounce, preview, settings/catalog, multiple
+  views, dark/light/community-format themes and a 420px pane. Unmodified new
+  captures are `screenshots/history-tab.jpg` and `history-collapsed.jpg`.
+- Final native status: `errors: []`. The follow-up test terminal was closed.
 
-On pushed commit `57e2c4c918a2544db5bdfa37b1ed68d9d3fb9d02`:
+## CI and security
 
-- [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43134090322): success.
-- [Combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43134094615): success.
+- [Windows tests on c55af3b](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43167912063): **success**.
+- [Combined CodeQL on 1c104dc](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43165278926): **success**.
+  This covers the final Python/JS; the later change only isolates the PowerShell
+  SDK checker. Code-scanning API reported zero open alerts after the scan.
+- Manual assessment and six corrected findings are in SECURITY_REVIEW.md.
+  The user declined Daybreak. No independent human audit is claimed.
 
-Two earlier queued runs had zero jobs and no downloadable logs. Fresh manual
-dispatches completed successfully. These results cover that exact commit;
-final-change CI results are recorded below after the source push. CodeQL job
-completion is not a claim of no alerts or an independent security audit.
+CI stays limited to one relevant-change Windows test/lint/panel job and one
+combined CodeQL job, with stale-run cancellation. No deployment/publication job.
 
-Final code commit `c95dfc739182d9f720bc2f9e1941d592ab13f55c`:
+## Coverage gaps and release gates
 
-- [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43139904187): **success**, 47 Python tests and 10 panel groups.
-- [Combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43139904383): **success**.
+Scrolled-form automation returned unavailable indexes/unreliable focus. Alias
+save/reset, picker cancellation and native invalid-JSON submission remain
+unverified by this pass, despite controller/backend coverage. An accidental
+unsaved consent draft was discarded; persisted content=false was checked.
+Native privacy/trust/authentication controls require user handling. Exhaustive
+GUI acceptance is not claimed. See FOLLOWUP_ACCEPTANCE.md for exact outcomes.
 
-Subsequent documentation-only result commits do not change the tested code and
-are intentionally outside workflow path filters.
-
-CI remains one relevant-change Windows fixture/lint/panel job and one main-branch
-combined CodeQL job, with cancellation of stale runs. No deployment or publication
-job exists. Installed-SDK/GUI, packaging and install smoke are local release checks.
-
-## Remaining release gates
-
-Cloud-account isolation, Gemini continuation, exhaustive real-GUI controls,
-mixed-build active ownership, future Herdr versions and independent security
-review remain open. Original deletion, native transcript migration and remote
-sync are deliberately unavailable. macOS/Linux, UNC and WSL are unsupported.
-`releaseReady=false`; source tests and a checked development bundle do not imply
-a production release or authorize installation/publication.
+Distinct company-account identity, mixed-build ownership, future SDKs and
+macOS/Linux/UNC/WSL remain unverified or unsupported. Original deletion, native
+transcript migration and remote sync remain explicitly unavailable. These limits
+keep `releaseReady=false`; no production installation or release publication
+was performed.

@@ -11,13 +11,13 @@ Requires CPython 3.14 and offline dependency installation through
 `scripts/install.ps1`. Copying the mod alone is insufficient. `mod.json` uses
 `place=none` so installation does not alter the current layout or hotkeys. Open
 with `herdr-app do mod.open --name session-hub` after approving installation.
-Use its Dock header button for a native sidebar in a new personal layout copy;
-the original layout and navigation are preserved.
+Use Dock for a collapsible History tab beside Files and Changes in a new personal
+layout copy. The original layout and shipped header files remain untouched.
 
 The accompanying preview is a real populated isolated-Herdr capture of the
 refined layout. Dark, paper and a custom community-format theme were checked.
-Four primary providers passed native Herdr context continuation with a local
-model fixture; isolated Herdr update and rollback passed. Original deletion,
+Four primary providers and Gemini passed native Herdr context continuation with a
+local model fixture; isolated Herdr update and rollback passed. Original deletion,
 native transcript migration and remote sync are unavailable. See README.md and
 docs/FEATURE_STATUS.md for the release blockers. Do not list this candidate as a
 production gallery release before those gates pass.

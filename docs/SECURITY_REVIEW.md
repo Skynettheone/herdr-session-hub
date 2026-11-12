@@ -3,6 +3,37 @@
 Scope: local source review and synthetic adversarial tests. This is the
 implementer's review, **not an independent audit or a certification**.
 
+## Completed manual follow-up
+
+The user requested manual review instead of Daybreak. Reviewed boundaries: native
+process argument construction and environment routing; untrusted JSONL/Gemini
+replay/SQLite WAL; path/reparse/hard-link handling; DPAPI/atomic state and recovery;
+profile trust/FTS consent; encrypted portability; install/uninstall scope; runtime
+network behavior; dependency locks and the licensed native-header adapter.
+
+| Finding | Resolution and evidence |
+|---|---|
+| P1: backup copy could truncate an unrelated hard-linked file | Backup now atomically replaces its own directory entry. A real hard-link regression proves unrelated source bytes remain unchanged. |
+| P2: bundle import accepted arbitrary filenames/hard links | Import/export require `.hsh`; credential names are rejected before reads or passphrase prompts; linked imports are refused. |
+| P2: imported aliases could bypass the normal secret filter | Import linking and export use the same alias normalization/redaction; regression proves the synthetic secret does not persist or re-export. |
+| P2: uninstall checked links only down to the selected home | Every ancestor is now checked to the drive; an actual directory-link dry-run is refused without modifying the sentinel. |
+| P2: profile JSON could add trusted projects or turn the string `false` into content opt-in | Same-config saves preserve recorded trust; changed configurations reset trust; enabled/content require JSON booleans. Regression rejects forged trust/version and malformed consent flags. |
+| Reliability: authenticated non-object bundle JSON could raise an uncaught attribute error | Schema/object validation now fails with the normal safe error. |
+
+No unresolved exploitable defect was identified within this reviewed scope after
+the fixes and stated regressions. This is not a claim of exhaustive security.
+Native providers remain trusted programs and may load their own configuration,
+hooks or network after user-requested launch. A trusted mod or compromised Windows
+account is outside Hub's security boundary. DPAPI protects disk state, not live
+process memory/pagefiles/crash dumps. Native active-owner probes remain conservative.
+
+The [OSV package-version API](https://google.github.io/osv.dev/api/) returned no
+listed advisories for cryptography 50.0.2, cffi 2.1.1 and pycparser 3.12 on
+2026-11-12. Only those public coordinates were sent. This does not replace review
+of bundled native dependencies or establish future safety. Runtime indexing and
+browsing have no network client; the loopback/cloud clients exist only in manual
+acceptance harnesses or separately installed native provider CLIs.
+
 ## Native acceptance review follow-up
 
 Both focused Standards and Spec reviewers found no remaining actionable defect
@@ -26,7 +57,7 @@ logs booleans/counts, never request bodies. It is not part of mod runtime or CI.
 Docking uses compare-and-create for a new personal layout and preserves the
 existing tree/files. Actual update/rollback retained 42 checked files. No production
 installation, original deletion, credential transfer or release publication occurred.
-Final combined CodeQL on `c95dfc7` completed successfully; the repository alert
+Latest combined CodeQL on `1c104dc` completed successfully; the repository alert
 API reported **0 open code-scanning alerts** afterward. That is a point-in-time
 scanner result, not proof of absence of vulnerabilities or an independent audit.
 
@@ -61,8 +92,9 @@ scanner result, not proof of absence of vulnerabilities or an independent audit.
 - No network/fetch implementation in shipped mod/helper. Public network requests
   during development were limited to requested upstream research, package wheels
   and package-name/version advisory queries. No history/credential upload.
-- Discovery uses read-only file modes. OpenCode uses `mode=ro&immutable=1`, refuses
-  WAL and checks before/after metadata; it never runs SQL writes on a source.
+- Discovery uses read-only file modes. OpenCode uses a private, checksummed read-only snapshot and committed-WAL
+  projection under Windows deny-write/delete handles. Active writers are refused;
+  no SQL writes run on a source.
 - Tests compare synthetic provider source hashes before/after preview, search,
   refresh and metadata changes. OpenCode tests also compare directory listings.
 - Credential filenames, arbitrary shells, relative/UNC paths, reparse points,
@@ -92,8 +124,9 @@ snapshots after clear/uninstall; no secure erase claim is made.
 
 Active detection intentionally over-blocks and is not proof of ownership absence
 for renamed/custom provider builds. Precise native locks/registry integrations
-remain a release gate. Actual provider continuation, account separation and update
-persistence are not verified. Imported native transcripts, destructive original
+remain a release gate. Tested native continuation and updater evidence is in
+NATIVE_ACCEPTANCE.md and FOLLOWUP_ACCEPTANCE.md; distinct-account identity
+separation remains unavailable with the single real account. Imported native transcripts, destructive original
 operations and remote endpoints are not implemented. No source data was deleted
 or production mod installed. The user later explicitly authorized source commits
 and a push to their GitHub origin; no GitHub Release or gallery publication was
@@ -118,6 +151,6 @@ Gemini replay checks total projected messages, not only physical journal records
 full-file replay prevents indexing text that later patches removed. Greater-than-
 budget/malformed Gemini sources disable launch and expose metadata-only fallback.
 
-No live credential-isolation, exact active-owner or native-context verification
-claim is added. The new source review is separate from CodeQL and is not an
+These earlier regression checks alone do not establish native continuity. The
+later native acceptance results above are limited to the tested CLIs and profiles. The new source review is separate from CodeQL and is not an
 independent third-party security audit. See CODE_REVIEW.md.

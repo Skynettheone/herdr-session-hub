@@ -1,10 +1,12 @@
 # Native layout and theme contract
 
-The Dock header action creates a 380px native sidebar in a new personal layout
-copy, preserving the full existing tree and original files. Repeated Dock reveals
-an existing Hub, including hidden ancestor stacks. `mod.open` alone is a 440px
-dialog; installation uses `place=none`. Actual sidebar/update/rollback captures
-and acceptance are in NATIVE_ACCEPTANCE.md.
+Dock adds one History view to the Files/Changes stack in a new personal layout
+copy. Its small header tab and collapse control share the same panel; no parallel
+history scanner runs in the header. Shipped header files and existing layout
+files are preserved. The licensed owned header adapter follows native styling.
+Repeated Dock reveals an existing Hub; unsupported custom layouts fall back to
+the 440px dialog. Installation uses `place=none`. Latest evidence and boundaries
+are in FOLLOWUP_ACCEPTANCE.md. Settings tabs wrap at narrow widths.
 
 The UI follows Herdr's native panel vocabulary: a compact header, semantic
 surfaces and borders, retained native text fields, focusable native buttons,
@@ -57,3 +59,8 @@ and `screenshots/community.png` are real isolated native renders, using paper an
 a custom community-format fixture derived from the installed Atom One Dark
 format. They are evidence of tested themes, not a claim that every community
 palette has accessible contrast. No user histories appear in them.
+
+The follow-up captures `screenshots/history-tab.jpg` and
+`screenshots/history-collapsed.jpg` show the actual native right-panel integration
+at 300px with an empty center and synthetic Pi metadata. They are unmodified
+app captures; the prior wide `preview.png` remains a genuine separate layout.

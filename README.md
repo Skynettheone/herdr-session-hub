@@ -5,9 +5,10 @@ and Copilot, with a live capability catalog for every Herdr agent.
 
 **Development candidate — not production-ready.** The implementation and local
 test suite are present. Native Herdr continuation passed for Claude, Codex,
-OpenCode and Pi using disposable sessions and a loopback model fixture. Real
-Herdr update/rollback also passed. Cloud-account isolation, exhaustive native
-controls and independent security review remain open. Production installation
+OpenCode, Pi and Gemini using disposable sessions and a loopback model fixture.
+Real-cloud Claude continuation and Herdr update/rollback also passed. Exhaustive
+native controls and distinct company-account identity isolation remain open. Manual security
+assessment and regression fixes are documented; it is not an independent audit. Production installation
 and publication have not been performed.
 
 Session Hub discovers explicit local roots, searches metadata and opted-in text,
@@ -25,7 +26,7 @@ bounded reads and visible partial coverage.
 | Capability | Status |
 |---|---|
 | F01–F04 discovery, history, metadata search, filters | Implemented; six history adapters fixture-tested |
-| F05 native continuation | Four primary CLIs passed native GUI context checks with local model fixture; active checks remain conservative |
+| F05 native continuation | Four primary CLIs and Gemini passed native GUI context checks with a local fixture; duplicate/native-active cases fail closed |
 | F06–F11 refresh, layout preservation, roots, preview, grouping, profiles | Implemented; isolated 0.1.14→0.1.15 update, rollback and re-update passed |
 | F12 full-text search | Opt-in encrypted local FTS5; bounded incremental coverage |
 | F13–F14 archive and aliases | Hub-only, reversible |
@@ -47,8 +48,9 @@ For a synthetic isolated demo or a local development bundle, follow
 [CONTRIBUTING.md](CONTRIBUTING.md). Install/uninstall/upgrade/rollback instructions
 are in the [user guide](docs/USER_GUIDE.md). The installer requires an explicit
 production-install switch and uses `place=none`; it does not replace layouts.
-Open History, then click its **Dock** header button to create a native 380px
-sidebar in a new personal layout copy. Your existing layout stays available.
+Open History, then click **Dock** to add one **History** tab beside **Files** and
+**Changes** in a new personal layout copy. Click History again, or its collapse
+button, to hide it. Your existing layout and shipped header stay available.
 
 This is a trusted mod. There is no runtime telemetry or network client. A native
 provider may use its own hooks and network after a user requests resume. Read

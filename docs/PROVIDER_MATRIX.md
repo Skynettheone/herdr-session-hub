@@ -35,7 +35,7 @@ All commands are **starting candidates**, not a substitute for probing installed
 | Provider | Read-only history | Native continuation status |
 |---|---|---|
 | Claude / Codex / Pi / OpenCode | Fixture-tested adapters plus real disposable native stores; OpenCode committed WAL supported only without open writers | Native Herdr context continuation passed with a loopback model fixture; cloud-account isolation unverified |
-| Gemini 0.49.0 | `tmp/<project>/chats/session-*.json` and `.jsonl`; complete replay ≤2 MiB / 10k projected messages; partial/malformed journals stay metadata-only | `--session-file <absolute-path>`; installed help verified; explicit .gemini home, Node launcher, projectPath hash match, CLI stamp and trust required; actual continuity unverified |
+| Gemini 0.49.0 | `tmp/<project>/chats/session-*.json` and `.jsonl`; complete replay ≤2 MiB / 10k messages; partial/malformed journals stay metadata-only; transport setup excluded | Native `--resume UUID` passed real Herdr context/ID/cwd checks with loopback backend. `--session-file` imports under another ID and is not used. Duplicate snapshots are blocked; explicit config/home/hash mapping/version/trust required. |
 | Copilot | `session-state/<UUID>/events.jsonl`; user/assistant content, root context, no subagent/tool content | Disabled: installed VS Code shim returns 127; no real CLI verified |
 | Cursor / Amp | Recognized through Herdr; no verified offline reader | No Hub continuation claim; CLIs absent |
 | Other built-in or custom Herdr agents | Dynamic catalog with native name/icon/installed state and explicit unavailable-history explanation | No guessed generic resume command |

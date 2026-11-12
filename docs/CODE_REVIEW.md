@@ -1,5 +1,12 @@
 # Source review — 2026-11-12
 
+Latest manual assessment and regressions are in SECURITY_REVIEW.md. The user
+declined the external Daybreak service; no external scan or independent human
+audit is claimed. Follow-up checks include native header source provenance,
+hard-linked backup safety, uninstall ancestors, bundle paths/redaction and
+profile trust/explicit search consent. Actual GUI evidence and remaining manual
+actions are recorded in FOLLOWUP_ACCEPTANCE.md. Historical two-axis reviews follow.
+
 The code-review skill ran separate Standards and Spec reviews against the
 requirements baseline `ecaa73d..HEAD`, followed by review of the working expansion.
 These are source reviews, not an independent security audit. The sections retain

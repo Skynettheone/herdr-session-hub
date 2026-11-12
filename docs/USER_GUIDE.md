@@ -5,6 +5,11 @@ continuation with disposable histories and a loopback model fixture. Herdr
 update/rollback passed in an isolated installation. Cloud-account isolation and
 independent security review remain unverified. Keep a separate metadata backup.
 
+The follow-up manual assessment and fixes are in SECURITY_REVIEW.md. Two
+separately configured profiles were signed into the same real account; distinct
+company-account identity behavior remains unverified because no second account
+is available. Gemini native continuation passed with a loopback model fixture.
+
 ## Setup and opening
 
 Python 3.14 x64, Herdr 0.1.15 and the provider CLIs must be installed separately.
@@ -18,11 +23,15 @@ herdr-app do mod.open --name session-hub
 
 The installer uses `place=none`: it does not dock automatically or edit layouts,
 keys, agent definitions or settings. Opening the panel is an explicit Herdr action.
-Click the **Dock** icon in History's header to add a 380px native sidebar. This
-creates and selects a new `session-hub-workspace` personal layout copy containing
-your complete existing layout. It never overwrites that layout; select the
-original layout in Herdr to return. Repeated docking reveals an existing Hub
-pane, including panes inside hidden stacks. Default dialog width is 440px.
+Click **Dock** to add History to the native Files/Changes panel in a new
+`session-hub-workspace` personal layout copy. A small History tab appears beside
+Files and Changes: click it to open/collapse the same panel. History's own collapse
+button also hides it. No duplicate scanner/view is added to the header.
+Existing layout files and shipped header code are preserved; select the original
+layout to return. Older Hub-generated left wrappers are upgraded only in the new
+copy. Custom layouts without the standard panel structure receive a clear fallback
+and can still open the 440px History dialog. Repeated docking reveals an existing
+Hub, including hidden ancestors, instead of adding another panel.
 To try it without production installation, see CONTRIBUTING.md. Do not copy only
 the mod directory: `runtime.json` must point at the configured Python helper.
 
@@ -218,6 +227,13 @@ Original project path must exactly match the recorded SHA-256 project hash. A
 missing/mismatched path leaves the project unknown and Continue disabled. Legacy
 JSON and current JSONL replay is complete only within 2 MiB and 10k messages;
 larger or malformed files stay metadata-only.
+
+Gemini continuation uses `--resume UUID`, preserving native identity. The
+`--session-file` option imports/forks and is deliberately not used. Gemini 0.49
+can leave multiple files with the same ID after resuming; Hub refuses ambiguous
+copies rather than guessing a source. Close live agents and inspect native Gemini
+history using its own supported UI when this fallback occurs. Hub never deletes,
+rewrites or silently coalesces those originals.
 
 Copilot profiles select the explicit Copilot home and `session-state` subtree.
 `events.jsonl` beneath UUID directories is read without starting Copilot. The

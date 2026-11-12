@@ -42,3 +42,16 @@
   deny-write source handles; OpenCode never opens originals through SQLite.
 - Distinguished the selected Claude CLI image from Claude Desktop and made
   process-enumeration failures block continuation rather than imply idle state.
+
+### Collapsible panel and manual security follow-up
+
+- Added one History tab beside native Files/Changes, with toggle/collapse and
+  preserved per-space native panel behavior. The owned Apache-2.0 header adapter
+  is scoped to a new personal layout; shipped mods/layouts are never replaced.
+- Added narrow settings-tab wrapping and corrupt header-preference fallback.
+- Corrected Gemini to native `--resume UUID`; excluded transport context blocks;
+  verified fresh native context responses and duplicate-ID refusal in the GUI lab.
+- Hardened atomic hard-linked backups, bundle paths/schema/alias filtering,
+  uninstall ancestor checks and explicit profile trust/content consent.
+- Added isolated real-account/manual Gemini harnesses. Available real-account
+  coverage uses two stores with one identity; no distinct company claim is made.

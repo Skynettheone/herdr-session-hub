@@ -8,14 +8,14 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
 | F01 | User-invoked native command detection; explicit profiles; missing CLI does not hide history | Help/version verified locally; no default home scan |
 | F02 | Six read-only adapters; native IDs, cwd, source/profile, times, titles; four real disposable native stores | No user histories used; OpenCode refuses open writers, supports quiescent committed WAL |
 | F03 | Normalized metadata substring search, debounced UI, literal FTS token option | Query work bounded; old subprocess may finish before newer query replaces it |
-| F04 | All/six history provider chips, profile filtering, live Herdr agent catalog | Native Codex filter exercised; other actions have host-mock coverage |
-| F05 | Four primary CLIs passed native Herdr continuation with prior context, original cwd and selected profile; Codex native writer lock; exact CLI image checks | Loopback model fixture, no cloud-account isolation proof; Gemini continuation unverified; non-Codex ownership remains conservative |
+| F04 | All/six history provider chips, profile filtering, live Herdr agent catalog | Native Codex/Pi/Gemini filters exercised; other actions have host coverage |
+| F05 | Four primary CLIs plus Gemini passed native Herdr context checks with a loopback backend; original ID/cwd/wrapper verified; native active ownership observed | Gemini 0.49 duplicate snapshots fail closed; real-cloud Claude continuation passed after user-handled startup notice; non-Codex ownership remains conservative |
 | F06 | Manual refresh beyond onboarding, incremental fingerprints/cache, bounded batches, visible counts/status, cooperative cancel | Enumeration per batch bounded at 20k files/160k entries; large content requires repeated passes |
-| F07 | Explicit Dock creates a personal sidebar layout copy; originals untouched; real 0.1.14→0.1.15 update, rollback and re-update passed | Resume enabled only on tested 0.1.15; API-breaking future updates require review |
+| F07 | Dock creates a personal layout copy with one collapsible History tab beside Files/Changes; shipped files/previous layouts untouched; update/rollback passed | Standard panel structure required for header integration; exact 0.1.15 SDK; future updates require review |
 | F08 | Guided root/config/executable form, pickers, advanced multi-root/exclusions JSON | Reparse, hard-link, UNC and WSL sources refused; unsupported custom-store resume disabled |
 | F09 | Read-only plain GPUI text, 30 turns × 2k chars, redaction, no tool payloads; Pi ancestry | Head budget partial; attachments omitted; Pi full-text covers all branches |
 | F10 | Compact collapsible project groups, page of 60; responsive master/detail or sidebar navigation; full cwd in Details | Group counts are per visible page; unknown conversation times remain unknown |
-| F11 | Explicit labeled profiles, physical de-duplication, separate targets, same-store ID collision guard, directory env mappings | Actual personal/company credential separation not runtime-verified; inherited provider credential env is stripped |
+| F11 | Explicit profiles/targets, same-store collision guard, directory env mapping; two isolated stores authenticated by the user and created real-cloud marker sessions; unsigned profile has no auth fallback | Both sign-ins use one identity; user has no separate company account, so distinct-company identity behavior remains unverified |
 | F12 | OFF by default; per-profile opt-in, local FTS5, chunk progress, clear/rebuild, DPAPI encrypted disk state | 256 MiB encrypted state limit; zstd replay capped at 128 MiB decoded / ratio 200 / 8 MiB window; no complete huge-compressed indexing claim |
 | F13 | Archive/unarchive only in Hub metadata | No provider-native archive mutation |
 | F14 | Display aliases and reset to original title | No native rename mutation |
@@ -24,8 +24,8 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
 
 ## Release gates still open
 
-1. Cloud-account personal/company isolation remains unverified. Four primary
-   providers passed native continuation with a loopback backend; Gemini has not.
+1. Distinct personal/company identities remain unverified: only one real account
+   is available. Signed profile routing and unsigned negative control passed.
 2. Broader active ownership across mixed CLI builds/profiles remains unverified.
    Actual live detection passed for all four tested CLIs. Codex 0.164 uses its
    per-thread lock; other adapters conservatively block their selected CLI image
@@ -34,11 +34,14 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
    themes/narrow widths; host mocks do not establish all native interactions.
    The renewed pass verified search/filter/preview/settings, dark/light/custom-theme
    rendering, multiple panes and captures. Four primary native launch controls
-   passed; exhaustive native controls remain open.
+   passed. Native alias/form typing, picker cancellation and invalid-JSON
+   submission remain unverified because scrolled-form automation focus was unreliable;
+   exact native/backend coverage is in FOLLOWUP_ACCEPTANCE.md.
 4. Future Herdr versions and unsupported OSes require new acceptance. Actual
    0.1.14→0.1.15 update, backup rollback and re-update passed in isolation.
-5. Independent security review of the helper, crypto envelope, dependency pipeline
-   and Windows executable/launch behavior; signed build strategy if binaries ship.
+5. Manual security assessment completed at the user's request, with regression
+   fixes documented in SECURITY_REVIEW.md. No independent human audit is claimed;
+   a signed build strategy is still needed if native binaries ship.
 6. User approval before production installation or gallery/release publication. Source
    commits and pushing to the requested origin were explicitly authorized.
 

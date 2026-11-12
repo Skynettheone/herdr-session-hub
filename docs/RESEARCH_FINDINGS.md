@@ -1,5 +1,28 @@
 # Research findings — 2026-11-11
 
+## Follow-up research and decisions — 2026-11-12
+
+The user authorized personal/company sign-ins performed by the user in disposable
+profiles and an external Daybreak assessment. No credential file may be inspected
+or copied. Daybreak bootstrap reported no GitHub connection; the user later declined
+Daybreak in favor of manual review. No external scan was launched. Gemini 0.49's installed @google/genai bundle supports
+GOOGLE_GEMINI_BASE_URL and native Gemini SSE. The planned continuity fixture uses
+that loopback endpoint and native-created histories, followed by the normal Hub
+launch chain. Native GUI coverage is tracked by control and outcome rather than inferred
+from host mocks. Completed results and remaining native form gaps are in
+FOLLOWUP_ACCEPTANCE.md.
+
+Follow-up: the user declined Daybreak and requested manual security assessment.
+Both user sign-ins report the same native identity; the user confirmed no separate
+company account is available. Distinct company-account validation cannot be
+claimed. Profile-store routing and an unsigned-profile negative control can still
+be checked with the available real account. Gemini --session-file was observed
+importing under a new UUID; native continuation must use --resume UUID instead.
+Herdr 0.1.15's installed tabs mod hardcodes Files/Changes. A licensed, scoped header
+adapter in a new personal layout copy is needed for the requested History toggle;
+shipped tabs/layouts must stay untouched. Its source is Apache-2.0, retained with
+notices, and exact SDK compatibility remains gated.
+
 ## Native acceptance follow-up — 2026-11-12
 
 Installed Codex help and `hc --skill` establish `--no-daemon` for Herdr-hosted
