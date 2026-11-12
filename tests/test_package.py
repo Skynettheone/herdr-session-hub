@@ -11,6 +11,16 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("package_verifier", ROOT / "scripts/verify-package.py")
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
+spec = importlib.util.spec_from_file_location("payload_builder", ROOT / "scripts/package_payload.py")
+payload = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(payload)
+
+
+def release_metadata(target="windows-x64"):
+    windows = target == "windows-x64"
+    return dict(platform=target, version="0.1.0" if windows else "0.1.0-experimental.1",
+                channel="stable" if windows else "experimental", releaseReady=windows,
+                stablePlatforms=["windows-x64"], nativeContinuationVerified=windows, payload="install")
 
 
 class PackageTests(unittest.TestCase):
@@ -22,7 +32,7 @@ class PackageTests(unittest.TestCase):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"synthetic package payload")
-        (self.root / "version.json").write_text(json.dumps(dict(platform="windows-x64",version="0.1.0-dev")))
+        (self.root / "version.json").write_text(json.dumps(release_metadata()))
         self.manifest()
 
     def tearDown(self):
@@ -97,7 +107,7 @@ class PackageTests(unittest.TestCase):
             package.verify(alias)
 
     def test_declared_platform_requires_its_own_offline_wheels(self):
-        (self.root / "version.json").write_text(json.dumps(dict(platform="linux-x64",version="0.1.0-dev")))
+        (self.root / "version.json").write_text(json.dumps(release_metadata("linux-x64")))
         self.manifest()
         with self.assertRaisesRegex(ValueError, "Incomplete"):
             package.verify(self.root)
@@ -122,6 +132,46 @@ class PackageTests(unittest.TestCase):
         self.manifest()
         with self.assertRaisesRegex(ValueError, "Unexpected"):
             package.verify(self.root)
+
+    def test_stable_checkout_derives_only_experimental_posix_artifacts(self):
+        windows = payload.artifact_config(ROOT, "windows-x64")
+        self.assertEqual(windows["stablePlatforms"], ["windows-x64"])
+        for target in ("linux-x64", "macos-arm64"):
+            config = payload.artifact_config(ROOT, target)
+            self.assertEqual(config["version"], windows["version"].split("-")[0] + "-experimental.1")
+            self.assertEqual(config["channel"], "experimental")
+            self.assertIs(config["releaseReady"], False)
+            self.assertIs(config["nativeContinuationVerified"], False)
+
+    def test_manifest_cannot_promote_experimental_target_or_enable_continuation(self):
+        for target in ("linux-x64", "macos-arm64"):
+            for name in package.target_files(target):
+                path = self.root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if not path.exists():
+                    path.write_bytes(b"synthetic target payload")
+            for path in self.root.rglob("*"):
+                if path.is_file() and path.name != "SHA256SUMS.txt" and path.relative_to(self.root).as_posix() not in package.target_files(target):
+                    path.unlink()
+            original = release_metadata(target)
+            (self.root / "version.json").write_text(json.dumps(original))
+            self.manifest()
+            package.verify(self.root)
+            for changes in ({"releaseReady": True}, {"channel": "stable"}, {"version": "0.1.0"},
+                            {"nativeContinuationVerified": True}, {"stablePlatforms": ["windows-x64", target]},
+                            {"releaseReady": True, "channel": "stable", "version": "0.1.0", "nativeContinuationVerified": True}):
+                (self.root / "version.json").write_text(json.dumps(original | changes))
+                self.manifest()
+                with self.subTest(target=target, changes=changes), self.assertRaisesRegex(ValueError, "release metadata"):
+                    package.verify(self.root)
+
+    def test_source_readiness_cannot_silently_expand_stable_scope(self):
+        original = json.loads((ROOT / "version.json").read_text())
+        for changes in ({"stablePlatforms": ["windows-x64", "linux-x64"]}, {"platform": "macos-arm64"},
+                        {"version": "0.1.0-rc.1", "releaseReady": True}, {"releaseReady": "true"}, {"channel": "experimental"}):
+            (self.root / "version.json").write_text(json.dumps(original | changes))
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                payload.release_config(self.root)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Prepare hash-locked POSIX candidate install bundles; never installs or publishes."""
+"""Prepare hash-locked experimental POSIX install bundles; never installs or publishes."""
 import argparse
 import datetime as dt
 import hashlib
@@ -18,9 +18,7 @@ def build(target):
     spec = importlib.util.spec_from_file_location("candidate_payload", path)
     payload = importlib.util.module_from_spec(spec)
     exec(compile(path.read_bytes(), str(path), "exec"), payload.__dict__)
-    version = payload.release_config(REPO)
-    if version["releaseReady"]:
-        raise ValueError("Native POSIX acceptance is pending; prepare an explicit release candidate")
+    version = payload.artifact_config(REPO, target)
     name = "herdr-session-hub-" + version["version"] + "-" + target + "-" + dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S")
     stage = REPO / "dist" / name
     count = payload.write_payload(REPO, stage, target)
@@ -37,7 +35,8 @@ def build(target):
             source.extractall(scratch)
         if payload.policy(REPO).verify(Path(scratch) / stage.name) != count:
             raise ValueError("Fresh extraction verification failed")
-    return dict(archive=str(archive), sha256=checksum, files=count, platform=target, releaseReady=False)
+    return dict(archive=str(archive), sha256=checksum, files=count, platform=target,
+                version=version["version"], channel=version["channel"], releaseReady=False)
 
 
 if __name__ == "__main__":
@@ -46,5 +45,5 @@ if __name__ == "__main__":
     parser.add_argument("--allow-unverified", action="store_true")
     args = parser.parse_args()
     if not args.allow_unverified:
-        parser.error("Native POSIX acceptance is pending; --allow-unverified is required for a local candidate")
+        parser.error("Native POSIX acceptance is pending; --allow-unverified is required for an experimental bundle")
     print(json.dumps(build(args.target), indent=2))

@@ -7,8 +7,12 @@ $package=Join-Path $repo ('.dev/install-smoke-'+[guid]::NewGuid().ToString('N'))
 $testHome=Join-Path ([IO.Path]::GetDirectoryName($package)) ('.dev/install-home-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path (Join-Path $package 'scripts'),(Join-Path $package 'wheelhouse'),(Join-Path $package 'mods/session-hub/helper'),(Join-Path $testHome 'layouts')|Out-Null
 foreach($name in @('version.json','requirements-windows.lock','LICENSE','README.md','RECIPE.md','SECURITY.md','THIRD_PARTY_NOTICES.md','CHANGELOG.md','preview.png')){Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $package}
+$version=Get-Content -LiteralPath (Join-Path $package 'version.json') -Raw|ConvertFrom-Json
+$version | Add-Member -NotePropertyName payload -NotePropertyValue 'install' -Force
+$version | Add-Member -NotePropertyName nativeContinuationVerified -NotePropertyValue $true -Force
+$version | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $package 'version.json') -Encoding utf8NoBOM
 New-Item -ItemType Directory -Force -Path (Join-Path $package 'docs/screenshots')|Out-Null
-foreach($name in @('USER_GUIDE.md','INSTALL_WITH_AGENT.md')){Copy-Item -LiteralPath (Join-Path $repo "docs/$name") -Destination (Join-Path $package 'docs')}
+foreach($name in @('USER_GUIDE.md','INSTALL_WITH_AGENT.md','RELEASE_NOTES.md')){Copy-Item -LiteralPath (Join-Path $repo "docs/$name") -Destination (Join-Path $package 'docs')}
 Copy-Item -LiteralPath (Join-Path $repo 'docs/screenshots/usage-community.png') -Destination (Join-Path $package 'docs/screenshots')
 foreach($name in @('install.ps1','uninstall.ps1','verify-package.py','check-native.ps1')){Copy-Item -LiteralPath (Join-Path $repo "scripts/$name") -Destination (Join-Path $package 'scripts')}
 foreach($name in @('main.js','model.js','ui.js','usage.js','tabs.js','mod.json')){Copy-Item -LiteralPath (Join-Path $repo "mods/session-hub/$name") -Destination (Join-Path $package 'mods/session-hub')}

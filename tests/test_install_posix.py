@@ -38,7 +38,9 @@ class InstallTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"synthetic package")
         (self.bundle / "scripts/verify-package.py").write_bytes((ROOT / "scripts/verify-package.py").read_bytes())
-        (self.bundle / "version.json").write_text(json.dumps(dict(version="0.1.0-dev",platform=installer.target())))
+        (self.bundle / "version.json").write_text(json.dumps(dict(version="0.1.0-experimental.1", platform=installer.target(),
+            channel="experimental", releaseReady=False, stablePlatforms=["windows-x64"],
+            nativeContinuationVerified=False, payload="install")))
         self.manifest()
         self.home = self.base / ".dev/app"
         self.herdr = self.base / "herdr-app"

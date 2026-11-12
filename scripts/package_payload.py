@@ -18,11 +18,28 @@ def policy(repo):
 
 def release_config(repo):
     config = json.loads((repo / "version.json").read_text(encoding="utf-8"))
+    if not isinstance(config, dict):
+        raise ValueError("Invalid source release configuration")
     version = config.get("version", "")
     if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-(?:dev|rc\.[1-9][0-9]*))?", version):
         raise ValueError("Use an explicit stable, development or release-candidate version")
     if type(config.get("releaseReady")) is not bool or config["releaseReady"] != ("-" not in version):
         raise ValueError("Stable versions require recorded release readiness; unverified builds require a candidate suffix")
+    if config.get("platform") != "windows-x64" or config.get("stablePlatforms") != ["windows-x64"]:
+        raise ValueError("Stable release scope is Windows x64 only")
+    if config.get("channel") != ("stable" if config["releaseReady"] else "candidate"):
+        raise ValueError("Source release channel does not match its readiness")
+    return config
+
+
+def artifact_config(repo, target):
+    if target not in ("windows-x64", "linux-x64", "macos-arm64"):
+        raise ValueError("Unsupported package platform")
+    config = release_config(repo)
+    config.update(platform=target, payload="install", nativeContinuationVerified=target == "windows-x64")
+    if target != "windows-x64":
+        config.update(version=config["version"].split("-")[0] + "-experimental.1", channel="experimental", releaseReady=False)
+    policy(repo).validate_release_metadata(config)
     return config
 
 
@@ -30,9 +47,7 @@ def write_payload(repo, stage, target):
     repo, stage = Path(repo).resolve(strict=True), Path(stage).absolute()
     rules = policy(repo)
     required = rules.target_files(target)
-    config = release_config(repo)
-    if target != "windows-x64" and config["releaseReady"]:
-        raise ValueError("Native POSIX desktop acceptance is pending; prepare a candidate bundle")
+    config = artifact_config(repo, target)
     if stage.resolve().parent != (repo / "dist").resolve() or stage.exists():
         raise ValueError("Choose a fresh payload directory directly below dist")
     locked = set(re.findall(r"--hash=sha256:([0-9a-f]{64})", (repo / rules.LOCKFILES[target]).read_text()))
@@ -53,9 +68,6 @@ def write_payload(repo, stage, target):
         destination = stage / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
-    config.update(platform=target, payload="install")
-    if target != "windows-x64":
-        config["nativeContinuationVerified"] = False
     (stage / "version.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     manifest = stage / "SHA256SUMS.txt"
     manifest.write_text("".join(f"{hashlib.sha256((stage / name).read_bytes()).hexdigest()}  {name}\n" for name in sorted(required)), encoding="utf-8")

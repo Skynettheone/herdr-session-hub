@@ -33,6 +33,7 @@ CORE_REQUIRED = REQUIRED - {"requirements-windows.lock", *("wheelhouse/" + name 
 CORE_REQUIRED = (CORE_REQUIRED - {"scripts/install.ps1", "scripts/uninstall.ps1", "scripts/check-native.ps1"}) | {
     "RECIPE.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "preview.png", "docs/USER_GUIDE.md",
     "docs/INSTALL_WITH_AGENT.md", "docs/screenshots/usage-community.png",
+    "docs/RELEASE_NOTES.md",
 }
 INSTALLERS = {"windows-x64": {"scripts/install.ps1", "scripts/uninstall.ps1", "scripts/check-native.ps1"},
               "linux-x64": {"scripts/install.py"}, "macos-arm64": {"scripts/install.py"}}
@@ -45,6 +46,24 @@ def target_files(target):
 
 
 REQUIRED = target_files("windows-x64")
+
+
+def validate_release_metadata(config):
+    if not isinstance(config, dict):
+        raise ValueError("Invalid release metadata")
+    target_files(config.get("platform"))
+    version, ready = config.get("version"), config.get("releaseReady")
+    if (not isinstance(version, str) or type(ready) is not bool
+            or config.get("stablePlatforms") != ["windows-x64"] or config.get("payload") != "install"):
+        raise ValueError("Invalid release metadata or stable platform scope")
+    if config["platform"] != "windows-x64":
+        if (ready or config.get("channel") != "experimental" or config.get("nativeContinuationVerified") is not False
+                or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-experimental\.[1-9][0-9]*", version)):
+            raise ValueError("Invalid release metadata: POSIX packages must remain experimental with continuation disabled")
+    elif (config.get("nativeContinuationVerified") is not True
+            or config.get("channel") != ("stable" if ready else "candidate")
+            or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+" + ("" if ready else r"-(?:dev|rc\.[1-9][0-9]*)"), version)):
+        raise ValueError("Invalid release metadata: Windows version/channel/readiness mismatch")
 
 
 def regular(path, directory=False):
@@ -89,6 +108,7 @@ def verify(root):
     config = json.loads(version_path.read_text(encoding="utf-8"))
     if not isinstance(config, dict) or not target_files(config.get("platform")).issubset(expected):
         raise ValueError("Incomplete package for its declared platform")
+    validate_release_metadata(config)
     allowed = target_files(config["platform"])
     actual, total = set(), 0
     for folder, directories, files in os.walk(root, followlinks=False):

@@ -174,3 +174,15 @@ Prepare 0.1.0-rc.1 install-only bundles with explicit file allowlists; keep test
 maintainer/audit documentation and old implementation prompts in source/history,
 not in consumer payloads. Do not delete private test/sign-in homes or originals.
 Candidate naming does not clear the outstanding POSIX native acceptance gate.
+
+## First stable scope decision — 2026-11-12
+
+The user now authorizes a Windows x64-only first stable release, superseding the
+earlier cross-platform readiness gate. Existing Windows GUI/provider/update and
+install evidence is sufficient for its exact documented versions; no runtime
+provider or Herdr compatibility guard will change. Prepare 0.1.0 stable metadata
+for Windows only. Derive separately named experimental POSIX artifacts with
+releaseReady=false and nativeContinuationVerified=false, even from a stable
+source checkout. Validate this distinction in the builder and package verifier.
+POSIX desktop acceptance remains required before expanding stable scope. Source
+commits/checks are authorized; production install, tags/publication remain forbidden.
