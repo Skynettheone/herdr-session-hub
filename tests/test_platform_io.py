@@ -124,6 +124,27 @@ class PortableStateTests(unittest.TestCase):
             with self.assertRaises(platform_io.PlatformError):
                 platform_io.local_filesystem(self.root)
 
+    def test_keychain_creation_reads_back_the_exact_new_key(self):
+        library = MagicMock()
+        library.SecKeychainSetUserInteractionAllowed.return_value = 0
+        saved = []
+        def find(*args):
+            if not saved:
+                return -25300
+            args[5]._obj.value = 32
+            args[6]._obj.value = ctypes.cast(saved[0], ctypes.c_void_p).value
+            return 0
+        def added(*args):
+            saved.append(ctypes.create_string_buffer(ctypes.string_at(args[6], args[5])))
+            return 0
+        library.SecKeychainFindGenericPassword.side_effect = find
+        library.SecKeychainAddGenericPassword.side_effect = added
+        with patch.object(platform_io.ctypes, "CDLL", return_value=library):
+            key = platform_io.mac_key(b"synthetic-new-scope", create=True)
+        self.assertEqual(len(key), 32)
+        self.assertTrue(key == saved[0].raw[:32])
+        self.assertEqual(library.SecKeychainFindGenericPassword.call_count, 2)
+
     def test_process_ownership_is_conservative_without_reading_arguments(self):
         def answer(output, code=0):
             return subprocess.CompletedProcess([], code, output)

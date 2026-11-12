@@ -83,6 +83,26 @@ sys.stdin.readline();d.rollback();d.close()
         self.assertEqual(self.path.read_bytes(), data)
         self.assertEqual(wal.read_bytes(), frames)
 
+    def test_wal_lock_generation_survives_last_provider_connection_close(self):
+        code = """import sqlite3,sys
+d=sqlite3.connect(sys.argv[1],timeout=.1)
+d.execute('PRAGMA journal_mode=WAL');d.execute('CREATE TABLE sample(value TEXT)');d.commit()
+print('idle',flush=True);sys.stdin.readline();d.close()
+"""
+        writer = subprocess.Popen([sys.executable,"-I","-c",code,str(self.path)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        try:
+            self.assertEqual(writer.stdout.readline().strip(),"idle")
+            shared = self.path.with_name("opencode.db-shm")
+            identity = (shared.stat().st_dev, shared.stat().st_ino)
+            with hub._adapters.platform_io.sqlite_sources(self.path, lambda p: hub.source_file(p,self.root)):
+                writer.communicate("close\n",timeout=10)
+                self.assertEqual(writer.returncode,0)
+                self.assertTrue(shared.exists())
+                self.assertEqual((shared.stat().st_dev,shared.stat().st_ino),identity)
+        finally:
+            if writer.poll() is None:
+                writer.communicate("close\n",timeout=10)
+
     def test_codex_flock_and_unverified_platform_continuation_guard(self):
         import fcntl
         directory = self.root / "thread-writer-locks"

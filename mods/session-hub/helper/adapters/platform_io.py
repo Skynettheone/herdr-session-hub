@@ -79,6 +79,9 @@ def sqlite_sources(path, validate):
             if wal.exists() or header[18:20] == b"\x02\x02":
                 shared_path = validate(path.with_name(path.name + "-shm"))
                 shared = opened(shared_path)
+                # SQLite's Unix deadman-switch lock prevents its last connection
+                # unlinking/resetting this SHM generation while we hold a reader.
+                fcntl.lockf(shared.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB, 1, 128, os.SEEK_SET)
                 fcntl.lockf(shared.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB, 3, 120, os.SEEK_SET)
             journal = opened(validate(wal)) if wal.exists() else None
             yield database, journal
@@ -180,6 +183,8 @@ def mac_key(identity, create=False):
     buffer = (ctypes.c_ubyte * len(key)).from_buffer_copy(key)
     if security.SecKeychainAddGenericPassword(None, len(SERVICE), SERVICE, len(identity), identity, len(key), buffer, None):
         raise PlatformError("Could not create the Hub Keychain item; no unencrypted state was saved")
+    if mac_key(identity) != key:
+        raise PlatformError("Hub Keychain creation could not be verified; no state was saved")
     return key
 
 
