@@ -152,3 +152,11 @@ Harden verification before target writes and use a unique runtime per installati
 with automatic mod rollback on a failed final swap. Test corrupt/missing/linked
 package inputs and interrupted swaps using disposable roots only. Hash manifests
 establish integrity, not publisher authentication; no signing identity is available.
+
+## Native-port scope correction — 2026-11-12
+
+The user explicitly requires macOS/Linux ports before production readiness.
+PORTABILITY_DESIGN.md records the platform interfaces, available Linux test
+environment and missing native desktop acceptance. Preserve Windows behavior;
+implement and test portable boundaries without turning missing key stores,
+unknown ownership or unlocked SQLite copies into apparent success.

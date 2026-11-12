@@ -12,7 +12,7 @@ REQUIRED = frozenset({
     *("mods/session-hub/" + name for name in ("main.js", "model.js", "ui.js", "usage.js", "tabs.js", "mod.json")),
     "mods/session-hub/helper/hub.py", "mods/session-hub/assets/HERDR-LICENSE.txt", "mods/session-hub/assets/herdr-logo.svg",
     *("mods/session-hub/helper/adapters/" + name + ".py" for name in
-      ("__init__", "common", "claude", "codex", "pi", "gemini", "copilot", "sqlite_snapshot", "usage")),
+      ("__init__", "common", "claude", "codex", "pi", "gemini", "copilot", "sqlite_snapshot", "usage", "platform_io")),
     *("mods/session-hub/icons/" + name + ".svg" for name in
       ("alert", "archive", "back", "chevron-down", "chevron-right", "close", "copy", "export", "folder",
        "forward", "history", "lock", "more", "plus", "profiles", "refresh", "search", "settings", "sidebar", "sort")),

@@ -113,9 +113,12 @@ def physical(path):
     return [s.st_dev, str(s.st_ino)] if s.st_ino else [os.path.normcase(str(path.resolve()))]
 
 
-def protect(data, decrypt=False):
+def protect(data, decrypt=False, root=None):
     if os.name != "nt":
-        raise HubError("Encrypted local state requires Windows DPAPI in this build")
+        try:
+            return _adapters.platform_io.protect(data, root, decrypt)
+        except _adapters.platform_io.PlatformError as error:
+            raise HubError(str(error)) from None
     class Blob(ctypes.Structure):
         _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_ubyte))]
     buf = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
@@ -142,7 +145,7 @@ def atomic(path, data, backup=False):
         raise HubError("Linked state target refused")
     tmp = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     try:
-        with tmp.open("xb") as f:
+        with os.fdopen(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
@@ -154,6 +157,12 @@ def atomic(path, data, backup=False):
             # link to an unrelated file. Both writes remain in Hub's namespace.
             atomic(previous, path.read_bytes())
         os.replace(tmp, path)
+        if os.name != "nt":
+            descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
     finally:
         tmp.unlink(missing_ok=True)
 
@@ -161,23 +170,24 @@ def atomic(path, data, backup=False):
 class Store:
     def __init__(self, root):
         self.root = local_path(str(root))
-        self.root.mkdir(parents=True, exist_ok=True)
+        try:
+            _adapters.platform_io.private_directory(self.root)
+        except _adapters.platform_io.PlatformError as error:
+            raise HubError(str(error)) from None
         self.path = self.root / "state.hub"
         self.lock = None
 
     def __enter__(self):
-        import msvcrt
         lockpath = self.root / "state.lock"
         if lockpath.exists() and is_link(lockpath):
             raise HubError("Linked state lock refused")
-        self.lock = lockpath.open("a+b")
+        self.lock = os.fdopen(os.open(lockpath, os.O_RDWR | os.O_CREAT, 0o600), "a+b")
         # Windows allows locking beyond EOF; never read/write a byte another
         # process may currently have locked while acquiring this mutex.
         end = time.monotonic() + 8
         while True:
             try:
-                self.lock.seek(0)
-                msvcrt.locking(self.lock.fileno(), msvcrt.LK_NBLCK, 1)
+                _adapters.platform_io.lock_file(self.lock)
                 break
             except OSError:
                 if time.monotonic() >= end:
@@ -189,7 +199,7 @@ class Store:
             if self.path.exists():
                 if is_link(self.path) or self.path.stat().st_size > MAX_STATE:
                     raise HubError("State size or path is unsafe")
-                self.db.deserialize(protect(self.path.read_bytes(), True))
+                self.db.deserialize(protect(self.path.read_bytes(), True, self.root))
             elif self.path.with_name("state.hub.bak").exists():
                 raise HubError("Current state is missing but a backup exists; run offline recovery")
             self.db.execute("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY,v TEXT NOT NULL)")
@@ -215,7 +225,7 @@ class Store:
 
     def save(self):
         self.db.commit()
-        data = protect(self.db.serialize())
+        data = protect(self.db.serialize(), root=self.root)
         if len(data) > MAX_STATE:
             raise HubError("Encrypted index reached its 256 MiB limit; clear content or exclude profiles")
         atomic(self.path, data, True)
@@ -231,9 +241,7 @@ class Store:
             if hasattr(self, "db"):
                 self.db.close()
             if self.lock:
-                import msvcrt
-                self.lock.seek(0)
-                msvcrt.locking(self.lock.fileno(), msvcrt.LK_UNLCK, 1)
+                _adapters.platform_io.lock_file(self.lock, unlock=True)
                 self.lock.close()
 
 
@@ -1573,21 +1581,20 @@ def merge_manifest(store, manifest, apply=False):
 def recover(root):
     # Acquire the same byte-range lock as normal helpers, even when state itself
     # cannot be decoded. No parallel writer can race the recovery replacement.
-    import msvcrt
     lockpath = root / "state.lock"
     if lockpath.exists() and is_link(lockpath):
         raise HubError("Linked recovery lock refused")
     with lockpath.open("a+b") as lock:
         lock.seek(0)
         try:
-            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            _adapters.platform_io.lock_file(lock)
         except OSError:
             raise HubError("Another helper is active; recovery refused") from None
         try:
             backup = root / "state.hub.bak"
             if is_link(backup) or backup.stat().st_size > MAX_STATE:
                 raise HubError("Unsafe recovery file")
-            image = protect(backup.read_bytes(), True)
+            image = protect(backup.read_bytes(), True, root)
             db = sqlite3.connect(":memory:")
             try:
                 db.deserialize(image)
@@ -1607,10 +1614,10 @@ def recover(root):
                 # Persist evidence without removing current. A failed replacement
                 # must leave the original authoritative state at its normal path.
                 atomic(root / ("damaged-" + uuid.uuid4().hex + ".hub"), current.read_bytes())
-            atomic(current, protect(image))
+            atomic(current, protect(image, root=root))
         finally:
             lock.seek(0)
-            msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            _adapters.platform_io.lock_file(lock, unlock=True)
 
 
 def main():

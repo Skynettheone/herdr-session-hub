@@ -1,5 +1,5 @@
 """Fixed local parser registry. No provider runtime or plugin is imported."""
-from . import claude, codex, pi, copilot, gemini, sqlite_snapshot as sqlite_snapshot, usage as usage
+from . import claude, codex, pi, copilot, gemini, sqlite_snapshot as sqlite_snapshot, usage as usage, platform_io as platform_io
 from .common import clean, redact, timestamp, text_blocks as text_blocks
 
 PARSERS = {"claude": claude.parse, "codex": codex.parse, "pi": pi.parse,
