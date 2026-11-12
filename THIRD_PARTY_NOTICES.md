@@ -22,7 +22,7 @@ Files/Changes controls. Shipped native header files are never overwritten; this
 adapter is selected only in the new personal layout copy. Original copyright
 notices in the upstream distribution remain applicable.
 
-Offline Windows bundles include unmodified binary Python wheels. Each wheel
+Offline platform bundles include unmodified binary Python wheels. Each wheel
 contains its own full license/notices; retain those files when installing or
 redistributing it:
 

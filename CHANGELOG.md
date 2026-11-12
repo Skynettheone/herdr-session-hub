@@ -2,6 +2,13 @@
 
 ## 0.1.0-dev — 2026-11-12
 
+- Add experimental Linux x64 and Apple Silicon macOS ports: native Keychain /
+  Secret Service encryption, private state, portable locks, cooperative read-only
+  SQLite snapshots, names-only ownership and offline transactional installers.
+- Add hash-locked platform bundles and one essential test job per target, with
+  real native key-store checks. POSIX continuation remains disabled until actual
+  Herdr GUI/provider acceptance; production readiness remains gated on that evidence.
+
 - Verify complete bounded package manifests before installation and check fresh
   archive extraction during builds; reject linked/private/unlisted payloads.
 - Keep separate runtimes for upgrades, serialize installers, restore the prior

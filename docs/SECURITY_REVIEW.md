@@ -1,5 +1,30 @@
 # Implementation security review — 2026-11-12
 
+## POSIX port assessment
+
+Preserved Windows DPAPI, source-sharing and continuation gates. Reviewed new
+boundaries: fixed Hub-only Keychain/Secret Service namespace, key material kept
+out of argv/files/logs, missing-key refusal, random AES-GCM nonces/root-bound AAD,
+private state modes, fsync/atomic writes, flock, native binary/Node targets,
+names-only ownership and cooperative SQLite byte-range locking. No provider
+credential, transcript mutation or runtime HTTP client was added.
+
+Review added the SQLite SHM deadman-switch reader lock so the last provider
+connection cannot replace/unlink a held generation. A real cross-process Linux
+test closes that connection during the snapshot and verifies retained identity.
+Keychain creation now verifies exact read-back before saving state. POSIX
+installation initially generated verifier bytecode in its source bundle; fixed
+loading preserves the verified bundle, with repeat-install regression coverage.
+Hosted tests exercised actual macOS Keychain and Linux Secret Service. Shared
+fixture vaults exist only in tests; runtime has no test-mode/fallback switch.
+
+This is implementer review, not an independent audit. POSIX source locks are
+advisory and version/VFS-specific; missing source SHM and unknown ownership fail
+closed. No additional desktops exist for native GUI/context acceptance, so POSIX
+continuation and production readiness remain disabled. Intel macOS has no pinned
+crypto wheel. CI failures exposed YAML quoting and symlink-alias test expectations;
+these were fixed, not hidden with skipped OS jobs. See PORT_ACCEPTANCE.md.
+
 ## Package and installer follow-up
 
 Release verification now rejects incomplete/empty/duplicate/unsafe manifests,

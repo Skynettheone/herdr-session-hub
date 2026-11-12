@@ -1,5 +1,13 @@
 # Release and gallery checklist
 
+Current status: **unpublished development preparation only**. The user explicitly
+requires macOS/Linux ports before production readiness and has no additional
+desktops for native GUI/context acceptance. The portable implementation and
+essential platform/key-store CI pass, but POSIX continuation stays disabled and
+`releaseReady=false`. See PORT_ACCEPTANCE.md and RELEASE_NOTES_DRAFT.md. Do not
+create a release/tag, change gallery topics/listings or install into production
+as part of this preparation. Those actions still require explicit user approval.
+
 ## GitHub repository settings
 - Name `herdr-session-hub`
 - Description: `A unified session manager for Herdr. Discover, search, preview, organize, and resume Claude Code, Codex, OpenCode, and Pi conversations.`

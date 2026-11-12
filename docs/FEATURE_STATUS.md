@@ -2,6 +2,9 @@
 
 “Implemented” below means code and stated tests exist. It does not mean all native
 provider acceptance gates passed. This is **0.1.0-dev**, not a production release.
+The user now requires macOS/Linux ports before readiness. Portable helper,
+key-store, source-lock, installer and package paths exist, with POSIX native
+continuation disabled until desktop acceptance. See PORT_ACCEPTANCE.md.
 
 Usage is an additional view in the same History panel: native themed graphs,
 numeric breakdowns, profile/provider/UTC filters, encrypted bounded numeric
@@ -41,8 +44,9 @@ Distinct company identity, other OS/provider builds and additional native agents
 still require external acceptance environments. Conservative ownership checks,
 bounded replay, unavailable deletion/native restore/remote sync and offline
 recorded-only Usage are deliberate guarded limits. No independent human audit or
-publisher signature is claimed. The maintainer must choose and accept an explicit
-supported release scope before clearing the release gate; production installation
+publisher signature is claimed. The chosen scope includes macOS/Linux, whose
+native GUI/continuation checks still require unavailable desktops before clearing
+the release gate; production installation
 and publication also need separate approval. Source commits and pushing to the
 requested origin were explicitly authorized.
 

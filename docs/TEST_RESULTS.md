@@ -1,5 +1,26 @@
 # Test results — 2026-11-12
 
+## Current platform-port checkpoint
+
+On exact source `930928a69a33cb08c9a71847a3d34eabf11cd67d`, the essential
+[platform matrix](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071315)
+and [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071363)
+passed. Windows ran 105 Python tests: 93 passed, 12 POSIX-only checks skipped,
+plus 17 UI host groups and Ruff. Linux x64 ran 105: 102 passed, three Windows-only
+checks skipped. Apple Silicon macOS ran 105: 102 passed, three Windows-only checks
+skipped. Actual Linux Secret Service and macOS Keychain tests passed; Windows
+retains actual DPAPI coverage. The repository reported zero open code-scanning
+alerts afterward. Native GUI/context acceptance for the new ports remains pending.
+
+Local Ubuntu WSL with a private checksum-verified Python 3.14.10 environment ran
+105 tests in 15.989 seconds: 101 passed, three Windows-only plus the unavailable
+local desktop-key-store check skipped. This is helper coverage, not WSL history
+support or a Linux GUI pass. POSIX tests verify real cross-process writer locks,
+WAL generation lifetime, private state, and install transactions. Installer unit
+tests mock pip/venv/SDK commands; no native desktop acceptance is inferred.
+The user's requirement includes those desktops, which are unavailable, so the
+production gate remains closed. PORT_ACCEPTANCE.md records the remaining work.
+
 ## Release-hardening follow-up
 
 **82 Python tests** passed in 33.884 seconds (76 previous + six adversarial
@@ -81,9 +102,10 @@ GUI acceptance is not claimed. See FOLLOWUP_ACCEPTANCE.md for exact outcomes.
 
 Distinct company-account identity, mixed-build ownership, future SDKs and
 macOS/Linux/UNC/WSL remain unverified or unsupported. Original deletion, native
-transcript migration and remote sync remain explicitly unavailable. These limits
-keep `releaseReady=false`; no production installation or release publication
-was performed.
+transcript migration and remote sync remain explicitly unavailable. The current
+port checkpoint above supersedes the older blanket macOS/Linux status. Native
+desktop acceptance is still required; no production installation or release
+publication was performed.
 
 ## Usage follow-up — 2026-11-12
 

@@ -3,6 +3,9 @@
 Native GPUI mod for Herdr Desktop 0.1.15 on Windows x64. Explicit profiles discover
 Claude Code, Codex, Pi, quiescent OpenCode, Gemini and Copilot histories without
 moving transcripts. Native catalog artwork follows the installed Herdr.
+Linux x64 and Apple Silicon macOS ports have native helper/key-store CI and
+offline installers, but native Herdr GUI/context acceptance is pending and
+provider continuation stays disabled there. See docs/PORT_ACCEPTANCE.md.
 Search/filter/group, read bounded previews, create aliases, archive or hide entries.
 Opt in to encrypted local content indexing. Request native resume in a local
 Herdr tab with explicit profile and cwd; continuity is not automatically verified.

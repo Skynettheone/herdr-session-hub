@@ -12,6 +12,10 @@ is available. Gemini native continuation passed with a loopback model fixture.
 
 ## Setup and opening
 
+The commands immediately below are for the verified Windows build. Experimental
+Linux x64 and Apple Silicon macOS setup is described separately afterward; those
+ports keep native provider continuation disabled pending desktop acceptance.
+
 Python 3.14 x64, Herdr 0.1.15 and the provider CLIs must be installed separately.
 The offline development bundle contains pinned Windows encryption wheels.
 Use a fresh extracted bundle. Installation validates every manifest entry and
@@ -38,6 +42,56 @@ and can still open the 440px History dialog. Repeated docking reveals an existin
 Hub, including hidden ancestors, instead of adding another panel.
 To try it without production installation, see CONTRIBUTING.md. Do not copy only
 the mod directory: `runtime.json` must point at the configured Python helper.
+
+## Experimental macOS and Linux setup
+
+Use the matching `linux-x64` or `macos-arm64` bundle, CPython 3.14 and a separately
+installed Herdr 0.1.15. Linux also requires `/usr/bin/secret-tool` and an unlocked
+desktop Secret Service; install those through your distribution's normal package
+manager yourself. macOS requires an unlocked login Keychain. Missing/locked key
+stores fail safely; no plaintext key file or unencrypted cache is substituted.
+Intel macOS and other architectures currently have no accepted bundle.
+
+For an explicitly approved installation, from a fresh verified extracted bundle:
+
+```sh
+python3.14 -I -B scripts/install.py install --app-home "$HOME/.config/herdr-app" --install-production
+herdr-app do mod.open --name session-hub
+```
+
+For a disposable home, omit `--install-production` and select a child under the
+bundle parent's `.dev` directory. `--herdr /absolute/path/to/herdr-app` selects
+the executable for the isolated one-render SDK check. The installer prepares a
+separate runtime, requires offline target-matching wheels, backs up an existing
+mod, serializes installers and restores ordinary failed final swaps. It does not
+edit existing settings, layouts or agent histories. Do not run it against your
+production home just to test the port.
+
+State directories must be owned by your user with mode 0700; new state writes
+use 0600. Hub encrypts state with a random AES key kept only in its own named
+Keychain/Secret Service entry. Preserve that key and the original state-home path
+when restoring encrypted local backups. A missing key never initializes over an
+existing state/backup. Use encrypted metadata exchange for another machine/home;
+do not copy key stores or provider credentials.
+
+The POSIX ports can browse configured histories, index opted-in text and report
+recorded Usage. Native provider continuation is disabled until platform-specific
+GUI/context tests pass. OpenCode WAL snapshots require an existing safe SHM lock
+file; Hub never creates it. Missing/locked sources report unavailable coverage.
+Network mounts, shared-host/WSL history paths and unverified filesystems are refused.
+
+```sh
+python3.14 -I -B scripts/install.py uninstall --app-home /absolute/disposable/home --dry-run
+python3.14 -I -B scripts/install.py uninstall --app-home /absolute/disposable/home
+# Explicitly also remove Hub-owned state/runtime/backups:
+python3.14 -I -B scripts/install.py uninstall --app-home /absolute/disposable/home --purge-hub-data
+```
+
+An external/production target still requires `--install-production` explicitly.
+The OS keyring item is retained for encrypted-backup recovery; manage only that
+Hub-namespaced item yourself if you intentionally discard all backups. Unresolved
+`data/session-hub-install/pending.json` uses the same explicit recovery procedure
+described below. Native desktop acceptance gaps are in PORT_ACCEPTANCE.md.
 
 ## Profiles
 

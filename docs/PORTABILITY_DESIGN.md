@@ -28,6 +28,8 @@ native acceptance exists; do not equate Herdr OS support with Hub acceptance.
 - [Python POSIX locking](https://docs.python.org/3.14/library/fcntl.html)
 - [SQLite rollback locking](https://sqlite.org/lockingv3.html)
 - [SQLite WAL lock offsets](https://sqlite.org/walformat.html#wal_locks)
+- [SQLite Unix SHM lifetime protocol](https://github.com/sqlite/sqlite/blob/master/src/os_unix.c)
+- [Darwin local-filesystem ABI](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/mount.h)
 - [Codex writer-lock protocol](https://github.com/openai/codex/blob/main/codex-rs/rollout/src/writer_lock.rs)
 
 Implementations are independent adapters, not copies of Apple/GNOME source.
@@ -36,3 +38,13 @@ key-store denial, unavailable desktop bus, permissions and missing APIs must
 produce safe errors without exposing key material. Local state is OS/user bound;
 encrypted metadata exchange remains the portable route. No original histories
 or production configuration are port/test targets.
+
+## Implemented/verified checkpoint
+
+The adapters, offline installers and bundles are implemented. Hosted macOS 15
+arm64 and Ubuntu 24.04 x64 tests passed their actual native key stores, filesystem
+and cooperative source-lock tests; Windows behavior remains covered. Source
+`930928a` passed all three essential jobs and combined CodeQL. Native desktop
+GUI/provider acceptance is still unavailable; continuation stays disabled on
+POSIX and `releaseReady=false`. Intel macOS has no binary wheel for the pinned
+encryption version and is not silently built from source or downgraded.

@@ -1,5 +1,9 @@
 # Provider adapter research checklist
 
+Current Windows continuation evidence applies only to the versions below.
+Linux/macOS helper ports share the readers, but native continuation is disabled
+pending target-specific GUI/provider acceptance. See PORT_ACCEPTANCE.md.
+
 All commands are **starting candidates**, not a substitute for probing installed versions and validating actual session IDs and directories.
 
 | Provider | Common local roots (per user) | Official/known resume approach | Discovery and risks |

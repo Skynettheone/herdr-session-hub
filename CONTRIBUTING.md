@@ -48,6 +48,25 @@ its own disposable package and home, tests tamper refusal and upgrade rollback,
 and never selects production. Installer SDK checks use the new runtime's own
 scratch home. Power-loss recovery is documented in USER_GUIDE.md.
 
+For POSIX development, use CPython 3.14 and the target's `requirements-linux-x64.lock`
+or `requirements-macos-arm64.lock`. Only explicit target-matching binary wheels
+are accepted. Prepare those exact wheels under `.research/ports/wheels/<target>`
+using `pip download --only-binary=:all: --require-hashes -r <lock> --dest <folder>`
+on that target (or pass pip's explicit platform/ABI options when cross-downloading).
+Then prepare an **experimental** source/wheel bundle from the checkout:
+
+```sh
+python -I -B scripts/build-port-bundle.py --target linux-x64 --allow-unverified
+python -I -B scripts/build-port-bundle.py --target macos-arm64 --allow-unverified
+```
+
+No production bundle is emitted by that script while native acceptance is pending.
+The shared POSIX fixture suites inject memory-only keys through test code; runtime
+does not have such a switch. `HUB_TEST_NATIVE_VAULT=1` enables the separate real
+OS-key-store test only on a disposable desktop/CI account. It creates Hub-owned
+synthetic entries; do not enable it casually on a person's normal desktop.
+PORT_ACCEPTANCE.md records the remaining native acceptance and architecture limits.
+
 Add fixtures for provider schema changes and re-probe native CLI help. Keep
 discovery and migration separate. Preserve argument arrays and source-read-only
 tests. Never replace unknown capability with invented success. Pane was studied
@@ -59,8 +78,10 @@ Use conventional commit messages, for example:
 Do not add assistant names or assistant-authorship trailers to commit messages.
 No push, production install or publication is part of the development workflow.
 
-CI intentionally runs one Windows job for relevant code changes: pinned runtime
-and dev wheels, correctness lint (F/E9), Python fixtures and native-host mocks.
+CI runs one relevant-change job per port target: Windows x64, Ubuntu 24.04 x64
+and macOS 15 arm64, with hash-locked runtime wheels. Shared lint and native-host
+JS mocks run once on Windows. POSIX jobs run actual filesystem, process-lock,
+installer and native Keychain/Secret Service checks.
 Documentation-only pushes do not run it. CodeQL runs both languages in one job
 on relevant main pushes or manually, avoiding duplicate PR/main security scans.
 Stale runs are cancelled. Native SDK/GUI, install smoke and packaging are local

@@ -50,7 +50,8 @@ Breakdowns: model, day and project; session averages optionally trim 10% at each
 Only enabled, explicitly configured profile roots are read. Shared physical files
 and stable billed event IDs are deduplicated before date filtering. No content
 search opt-in is changed. Numeric/model/time-only cache data is encrypted in Hub's
-DPAPI store, excluded from portable metadata. Reads, events, source count and
+DPAPI store (OS-key-store AES-GCM in the experimental POSIX ports), excluded from
+portable metadata. Reads, events, source count and
 refresh work are bounded. Append guards detect rewrites; partial lines, malformed
 histories, compressed replay limits and concurrent writers remain visible in
 coverage. Interrupted refreshes retain committed work and can continue.

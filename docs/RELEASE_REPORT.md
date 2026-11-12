@@ -1,6 +1,45 @@
 # Release preparation report — 2026-11-12
 
-## Current release-hardening candidate
+## Current native-port development candidate
+
+The user requires macOS/Linux ports before production readiness and confirmed
+no additional desktops are available. Windows-only production scope was not
+accepted. Portable core, native key stores, cooperative writer locks, offline
+installers and platform bundles are implemented; POSIX native continuation and
+the overall production gate remain disabled pending real Herdr GUI/context tests.
+See PORT_ACCEPTANCE.md for the precise scope and follow-up procedure.
+
+Source stages are committed separately: `248b2a8` native state services,
+`8d65a29` POSIX filesystem/source guards, `4c904ab` packaging and OS CI,
+`720bdc8` YAML correction, `942a40c` WAL lifetime/Keychain read-back and
+`930928a` canonical executable test expectations. Final source
+`930928a69a33cb08c9a71847a3d34eabf11cd67d` passed
+[all three platform jobs](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071315)
+and [combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071363).
+Zero open code-scanning alerts were reported afterward.
+
+Each platform ran 105 Python tests: Windows **93 passed / 12 platform skips**,
+Linux and Apple Silicon macOS each **102 passed / 3 Windows-only skips**.
+Windows also passed Ruff and 17 UI host groups. Actual Keychain and Secret Service
+creation/read-back/encryption/decryption/unsigned-scope checks passed. Local
+isolated Linux ran 105 with four skips (its actual desktop key store is absent).
+Real source-lock tests cover active transactions, checkpoints and the last
+provider connection closing while a snapshot holds the SHM deadman switch.
+
+No provider credential, production configuration, original history or remote
+endpoint was a port test target. The first CI failures (YAML quoting and raw
+Python symlink expectations) were fixed and rerun; they are not counted as passes.
+Installer transaction tests mock external processes and do not substitute for
+native GUI acceptance. The Windows/native update evidence remains separately
+valid for its recorded scope; it is not attributed to macOS/Linux.
+
+Local Windows and experimental Linux x64/macOS arm64 bundles are prepared only
+with explicit development labels, matching offline wheels, manifests and fresh
+extraction checks. Final artifact/checksum receipts are appended externally to
+avoid a checksum cycle. No production install, tag, release or gallery publication
+was performed. Intel macOS and other architectures have no accepted bundle.
+
+## Previous release-hardening candidate
 
 Package/installer fixes are committed separately at `556f0aa` and `c235dc9`;
 the tested source/docs snapshot is `fce7c5f79b413da8f43fd49cf38a54cf1f7f242c`.

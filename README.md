@@ -19,6 +19,15 @@ identity isolation remains unverified. Manual security
 assessment and regression fixes are documented; it is not an independent audit. Production installation
 and publication have not been performed.
 
+The accepted release goal now includes **Linux x64 and Apple Silicon macOS**
+alongside Windows x64. Portable encrypted state, filesystem/process/SQLite guards,
+offline installers and platform CI are implemented. macOS/Linux native Herdr GUI
+and provider continuation acceptance remain pending; continuation is explicitly
+disabled there. Intel macOS has no compatible wheel for the pinned encryption
+version. [Port scope and acceptance](docs/PORT_ACCEPTANCE.md) separates tested
+helper behavior from the remaining desktop checks. No additional desktops are
+available in this session, so the production gate remains closed.
+
 Session Hub discovers explicit local roots, searches metadata and opted-in text,
 groups projects, previews plain conversation text, and stores aliases/archive
 flags separately from originals. Hub state is encrypted with Windows DPAPI.
@@ -51,7 +60,8 @@ SQLite 3.50.4, Node 24.14.1 (tests only). CLI help/version probes: Claude 2.1.32
 Codex 0.164.0, OpenCode 1.3.17, Pi 1.1.0, Gemini 0.49.0. Copilot is a missing-CLI shim; its native continuation
 is disabled. Cursor, Amp and other Herdr/custom agents are recognized with honest
 unavailable-history status when no verified offline adapter exists. This does not
-imply continuation acceptance for those additional providers. macOS/Linux, UNC and WSL are unsupported in this build.
+imply continuation acceptance for those additional providers. macOS/Linux bundles
+are experimental ports; UNC, WSL history roots and network mounts are unsupported.
 
 For a synthetic isolated demo or a local development bundle, follow
 [CONTRIBUTING.md](CONTRIBUTING.md). Install/uninstall/upgrade/rollback instructions
