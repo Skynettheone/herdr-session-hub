@@ -66,7 +66,8 @@ export function renderPanel(v, cx, rawTheme) {
   function listPane() {
     const pane = v_flex().min_h(0).min_w(0).flex_1();
     pane.child(v_flex().flex_none().px(12).pt(12).pb(8).gap(9)
-      .child(h_flex().h(34).px(10).gap(8).items_center().rounded(7).bg(t.surface).border_1().border_color(v.searchFocused?t.accent:t.input)
+      .child(h_flex().id("history-search-input").h(34).px(10).gap(8).items_center().rounded(7).bg(t.surface).border_1().border_color(v.searchFocused?t.accent:t.input)
+        .on_click(()=>v.search.focus())
         .child(icon("search")).child(Input.new(v.search).flex_1().min_w(0).text_size(12).text_color(t.foreground))
         .when(!!v.query, e=>e.child(button("clear-search","Clear search",cx=>{v.search.set_value("");v.query="";v.offset=0;v.load(cx);},{icon:"close",iconOnly:true}))))
       .child(h_flex().gap(3).flex_wrap().children(providers.map(p=>button("provider-"+p,p==="all"?"All":p==="claude"?"Claude":providerName(p),cx=>{

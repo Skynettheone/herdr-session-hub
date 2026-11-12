@@ -104,6 +104,7 @@ async function panel(initialHook,props={},savedPanels=null) {
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{
   const p=await panel();p.draw();
+  await p.click('history-search-input');assert.ok(p.view.search.focusCount>0);
   p.view.search.set_value('café');p.view.search.handlers.change({},p.cx);await p.flush();
   assert.equal(p.requests.at(-1).query,'café');
   await p.click('provider-codex');assert.equal(p.requests.at(-1).provider,'codex');
@@ -114,6 +115,7 @@ test('panel search, filters, pagination and grouping run after initial render', 
   await p.click('removed-filter');assert.equal(p.requests.at(-1).removed,true);
   await p.click('sort');assert.equal(p.requests.at(-1).oldest,true);
   await p.click('refresh');assert.ok(p.requests.some(r=>r.action==='refresh'));
+  assert.equal(p.view.notice,'History refreshed.');
   await p.click('group-C:/Project');assert.equal(p.view.collapsed['C:/Project'],true);
 });
 
@@ -152,6 +154,7 @@ test('settings, malformed profile JSON, indexing, failures and separate pane sta
   await p.click('preview-bundle');assert.equal(p.runs.at(-1).args.argv.at(-2),'import');
   await p.click('apply-bundle');assert.equal(p.runs.at(-1).args.argv.at(-1),'--apply');
   await p.click('settings-search');await p.click('index-batch');assert.ok(p.requests.some(r=>r.action==='refresh'&&r.content));
+  assert.equal(p.view.notice,'Search index updated. See Details for conversation coverage.');
   await p.click('clear-content');assert.ok(p.requests.some(r=>r.action==='clear-content'));
   p.setFail(true);await p.click('clear-content');assert.equal(p.view.error,'Synthetic failure');assert.equal(p.view.busy,false);
 });

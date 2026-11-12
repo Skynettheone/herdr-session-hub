@@ -168,6 +168,8 @@ export default class SessionHub extends View {
           cx.notify();
         } while (remaining > 0 && !this.scanCancelled && batches < 2000);
         if (this.scanCancelled) this.notice = "Stopped after the current batch; indexed results are preserved.";
+        else if (remaining > 0) this.notice = "This pass is finished. Refresh again to process remaining sources.";
+        else this.notice = content ? "Search index updated. See Details for conversation coverage." : "History refreshed.";
       } catch (error) { this.error = safeText(error.message, 500); }
       finally { this.finishOperation(cx); }
     });
