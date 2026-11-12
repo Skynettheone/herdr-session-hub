@@ -162,6 +162,14 @@ class PortableStateTests(unittest.TestCase):
         script.chmod(0o700)
         self.assertFalse(platform_io.native_executable(script))
 
+    def test_executable_detection_never_opens_credential_named_alias_targets(self):
+        for name in ("auth.json", "AUTH.JSON", ".env", "credentials.json", "config.toml"):
+            path = self.root / name
+            path.write_bytes(b"synthetic credential sentinel, never read")
+            path.chmod(0o700)
+            with patch.object(Path, "open", side_effect=AssertionError("Credential read")):
+                self.assertFalse(platform_io.native_executable(path))
+
     @unittest.skipIf(os.name == "nt", "POSIX ownership/mode acceptance")
     def test_private_directory_rejects_shared_permissions(self):
         self.root.chmod(0o755)

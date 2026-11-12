@@ -17,6 +17,7 @@ import sys
 
 SERVICE = b"dev.herdr.session-hub.local-state"
 HEADER = b"HSH-POSIX1\x00"
+CREDENTIAL_NAMES = {"auth.json", "credentials.json", "config.json", "settings.json", "config.toml", "tokens.json", ".env"}
 
 
 def local_filesystem(path):
@@ -95,7 +96,9 @@ def sqlite_sources(path, validate):
 
 
 def native_executable(path):
-    if not path.is_file() or not os.access(path, os.X_OK):
+    # A PATH alias can resolve to a credential-named file. Refuse before even
+    # reading a binary header, consistently with the history/source boundary.
+    if path.name.casefold() in CREDENTIAL_NAMES or not path.is_file() or not os.access(path, os.X_OK):
         return False
     with path.open("rb") as stream:
         magic = stream.read(4)
