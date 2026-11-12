@@ -73,6 +73,12 @@ credential inspection, real conversation export or logout/revocation was perform
 
 ## GUI coverage boundary
 
+The earlier form gaps below are superseded by FORM_ACCEPTANCE.md: native alias
+save/reset, guided field typing/save, required-field guidance, malformed JSON,
+picker opening/cancellation and Cancel have now passed after the usability fixes.
+The subsequent suite has twelve host groups. Privacy controls remain user-owned.
+
+
 Existing native evidence covers search/debounce, provider filtering, previews,
 settings/catalog, dark/light/community-format themes, a narrow pane and multiple
 views. This follow-up adds the actual header/stack integration and Gemini launch.

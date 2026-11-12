@@ -34,9 +34,10 @@ provider acceptance gates passed. This is **0.1.0-dev**, not a production releas
    themes/narrow widths; host mocks do not establish all native interactions.
    The renewed pass verified search/filter/preview/settings, dark/light/custom-theme
    rendering, multiple panes and captures. Four primary native launch controls
-   passed. Native alias/form typing, picker cancellation and invalid-JSON
-   submission remain unverified because scrolled-form automation focus was unreliable;
-   exact native/backend coverage is in FOLLOWUP_ACCEPTANCE.md.
+   passed. Native alias/form typing and save, picker cancellation, required-field
+   validation, invalid JSON and Cancel subsequently passed after usability fixes;
+   exact native/backend coverage is in FORM_ACCEPTANCE.md. Privacy steps require
+   user handling and universal GUI/authentication coverage is not claimed.
 4. Future Herdr versions and unsupported OSes require new acceptance. Actual
    0.1.14→0.1.15 update, backup rollback and re-update passed in isolation.
 5. Manual security assessment completed at the user's request, with regression

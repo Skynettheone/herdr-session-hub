@@ -7,7 +7,7 @@ not an installation target. Real cloud checks used only new synthetic prompts.
 
 ## Automated checks
 
-- **53 Python tests** and **11 native-host panel groups** passed locally and in
+- **53 Python tests** and **12 native-host panel groups** passed locally and in
   hosted Windows CI. Ruff correctness checks passed. Coverage includes oversized
   and malformed histories, bounded compressed Codex rollouts, duplicate identity,
   active-writer refusal, SQLite WAL snapshot consistency, shared-profile FTS
@@ -48,10 +48,9 @@ not an installation target. Real cloud checks used only new synthetic prompts.
 
 ## CI and security
 
-- [Windows tests on c55af3b](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43167912063): **success**.
-- [Combined CodeQL on 1c104dc](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43165278926): **success**.
-  This covers the final Python/JS; the later change only isolates the PowerShell
-  SDK checker. Code-scanning API reported zero open alerts after the scan.
+- [Windows tests on df50a84](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43171220253): **success**.
+- [Combined CodeQL on df50a84](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43171220200): **success**.
+  This covers the latest form/label implementation and regression tests. Code-scanning API reported zero open alerts after the scan.
 - Manual assessment and six corrected findings are in SECURITY_REVIEW.md.
   The user declined Daybreak. No independent human audit is claimed.
 
@@ -60,10 +59,10 @@ combined CodeQL job, with stale-run cancellation. No deployment/publication job.
 
 ## Coverage gaps and release gates
 
-Scrolled-form automation returned unavailable indexes/unreliable focus. Alias
-save/reset, picker cancellation and native invalid-JSON submission remain
-unverified by this pass, despite controller/backend coverage. An accidental
-unsaved consent draft was discarded; persisted content=false was checked.
+The earlier scrolled-form gaps are closed by the native pass in
+FORM_ACCEPTANCE.md: alias save/reset, guided typing/save, empty-field validation,
+malformed JSON, picker cancellation and Cancel passed after the usability fixes.
+Privacy opt-in remains a user-controlled step and is recorded separately.
 Native privacy/trust/authentication controls require user handling. Exhaustive
 GUI acceptance is not claimed. See FOLLOWUP_ACCEPTANCE.md for exact outcomes.
 

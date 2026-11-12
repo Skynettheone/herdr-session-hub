@@ -2,6 +2,12 @@
 
 ## 0.1.0-dev — 2026-11-12
 
+- Simplify profile editing with dedicated guided/multiline JSON views, persistent
+  Save/Cancel controls, required-field guidance, draft cancellation and fixed IDs.
+- Focus native input frames explicitly; add original-name reset.
+- Remove repeated provider/profile labels while retaining meaningful account
+  labels and disambiguating multiple targets. Simplify conversation tabs.
+
 - Added a native GPUI history panel with explicit profiles, filters, project
   grouping, search, previews, archive, aliases and reversible Hub removal.
 - Added independent read-only Claude, Codex (including bounded zstd), Pi and

@@ -12,7 +12,7 @@ maps every F01–F16 requirement to implementation, tested scope and limits.
 
 ## Validation and release status
 
-53 Python tests, 11 host groups, correctness lint, isolated installed SDK check,
+53 Python tests, 12 host groups, correctness lint, isolated installed SDK check,
 offline wheel verification and disposable install/upgrade/uninstall passed.
 Hosted final-source Windows CI and final Python/JS CodeQL succeeded; links are in
 TEST_RESULTS.md. Native continuity/updater evidence is in NATIVE_ACCEPTANCE.md
@@ -20,8 +20,8 @@ and FOLLOWUP_ACCEPTANCE.md. Manual security findings and fixes are documented;
 no independent audit or certification is claimed.
 
 `releaseReady=false` is intentional. A distinct company identity is unavailable;
-several native form actions still need a human pass because automation focus was
-unreliable. Gemini 0.49 duplicate snapshots refuse continuation. Mixed-build live
+The previously open native form actions passed after the usability fixes in
+FORM_ACCEPTANCE.md; privacy-control handling remains user-owned. Gemini 0.49 duplicate snapshots refuse continuation. Mixed-build live
 ownership and future Herdr SDKs require further acceptance. Native transcript
 migration, original deletion and remote sync are unavailable. This candidate is
 not an unqualified production release.
@@ -41,7 +41,10 @@ an integrity check, not a signature. All older ZIPs are superseded by the latest
 verified candidate listed below. Filename/hash/final test output are appended
 outside the ZIP after verification to avoid a checksum/report cycle.
 
-## Final verified candidate
+## Previous verified candidate
+
+This ZIP predates the form/duplicate-label fixes in df50a84. It is retained as
+historical evidence; the next verified package supersedes it.
 
 `herdr-session-hub-0.1.0-dev-windows-x64-20261112063431.zip`, **4,624,285 bytes**.
 SHA-256: `f0839d9b5419f671bfc6a7586d0e8fa96d094b8778ee197c929b0530cd136f4c`.
