@@ -1,5 +1,5 @@
 import { View } from "gpui-kit";
-import { InputState, TextareaState } from "gpui-base";
+import { InputState, TextareaState, ScrollHandle } from "gpui-base";
 import { appHome, readTextFile, writeTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents, layout, closeOverlay, props as modProps } from "herdr";
 import { safeText, requestFor, launchArgs, agentCatalog, sidebarLayout } from "./model.js";
 import { renderPanel } from "./ui.js";
@@ -20,6 +20,7 @@ export default class SessionHub extends View {
     this.hubView = "history"; this.usagePeriod = "30d"; this.usageProvider = "all"; this.usageProfile = "";
     this.usageMetric = "tokens"; this.usageBreakdown = "models"; this.usageTrim = false; this.usageModel = "";
     this.usageData = null; this.usageLoading = false; this.usagePrices = false;
+    this.usageScroll = ScrollHandle.new();
     this.usageFields = {};
     for (const [name, placeholder] of Object.entries({start:"YYYY-MM-DD",end:"YYYY-MM-DD",model:"Exact model identifier",
       input:"USD / million",output:"USD / million",cacheRead:"USD / million",cacheWrite:"USD / million"})) {
@@ -202,9 +203,11 @@ export default class SessionHub extends View {
     if(this.busy)return;
     const snapshot=this.usageRequest();
     const mutationAction=mutation?.action,removingRate=mutation?.rate===null;
-    const key=JSON.stringify(snapshot);
-    if(this.usageSnapshotKey!==key)this.usageData=null;
-    this.usageSnapshotKey=key;
+    // Trimming changes only the average. Retain the same rows while it loads
+    // so a control near the bottom does not collapse the scroll body to zero.
+    const key=JSON.stringify({...snapshot,trim:false});
+    if(this.usageSelectionKey!==key)this.usageData=null;
+    this.usageSelectionKey=key;
     this.busy=true;this.usageLoading=true;this.error="";this.scanning=refresh;this.scanCancelled=false;
     if(refresh)this.notice="Reading recorded usage from approved history folders. Conversation search stays unchanged.";
     cx.notify();
@@ -240,6 +243,7 @@ export default class SessionHub extends View {
     this.usageFields.model.set_value(key.slice(split+1));
     const rate=this.usageData?.rates?.[key];
     for(const name of ["input","output","cacheRead","cacheWrite"])this.usageFields[name].set_value(rate?String(rate[name]):"");
+    this.usageScroll.scroll_to_item(0);
     cx.notify();
   }
   saveUsageRate(cx, remove=false) {

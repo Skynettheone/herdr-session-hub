@@ -28,7 +28,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
   let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',roots:['C:/Account/projects'],configHome:'C:/Account',enabled:true,versionVerified:true,trustedProjects:[]}],statuses:[]};
-  let fail = false, layoutState=nativeLayout();
+  let fail = false, layoutState=nativeLayout(),usageHook=null;
   const usageTotals={input:100,output:200,cacheRead:700,cacheWrite:50,tokens:1050,events:2,cost:null,pricedEvents:0,savings:null,sessions:1,cacheHit:.875};
   const usageData={totals:usageTotals,averages:{tokens:1050,events:2,cost:null,sessions:1,trimmed:0},
     models:[{key:'claude:test-model',...usageTotals}],projects:[{key:'Project',...usageTotals}],providers:[{key:'claude',...usageTotals}],
@@ -83,6 +83,7 @@ async function panel(initialHook,props={},savedPanels=null) {
       if(req.action==='resume')result={argv:['python.exe','literal arg'],folder:'C:/Project'};
       if(req.action==='refresh')result={advanced:1,statuses:[]};
       if(req.action.startsWith('usage')) {
+        if(usageHook)await usageHook(req);
         if(req.action==='usage-price') {const k=req.rateProvider+':'+req.rateModel;if(req.rate===null)delete usageData.rates[k];else usageData.rates[k]=req.rate;}
         result=usageData;
       }
@@ -96,7 +97,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
   const art = kind => path => {artwork.push({kind,path});return element();};
-  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image'),PathBuilder:{fill:pathBuilder,stroke:pathBuilder},Background:{solid:()=>({opacity:()=>({})})}}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(){}})},Button:{new:element},InputState:inputState,TextareaState:inputState,Input:{new:element},Textarea:{new:element}}),herdr:synthetic(host),'./model.js':model};
+  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image'),PathBuilder:{fill:pathBuilder,stroke:pathBuilder},Background:{solid:()=>({opacity:()=>({})})}}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(index){this.last=index;}})},Button:{new:element},InputState:inputState,TextareaState:inputState,Input:{new:element},Textarea:{new:element}}),herdr:synthetic(host),'./model.js':model};
   await model.link(()=>{});await model.evaluate();
   const usage=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/usage.js',import.meta.url),'utf8'),{context});
   await usage.link(name=>sources[name]);await usage.evaluate();sources['./usage.js']=usage;
@@ -112,8 +113,9 @@ async function panel(initialHook,props={},savedPanels=null) {
   async function flush(){while(pending.length){const p=pending.shift();await p;}}
   await flush();
   function draw(){controls.clear();styles.length=0;view.render(cx);}
-  async function click(id){draw();assert.ok(controls.has(id),`visible control ${id}`);controls.get(id)({},cx);await flush();draw();}
-  return {view,cx,requests,runs,clipboard,inputs,draw,click,flush,row,styles,artwork,paths,usageData,usage:usage.namespace,setLayout(v){layoutState=v;},setListHook(fn){listHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
+  function press(id){draw();assert.ok(controls.has(id),`visible control ${id}`);controls.get(id)({},cx);}
+  async function click(id){press(id);await flush();draw();}
+  return {view,cx,requests,runs,clipboard,inputs,draw,press,click,flush,row,styles,artwork,paths,usageData,usage:usage.namespace,setLayout(v){layoutState=v;},setListHook(fn){listHook=fn;},setUsageHook(fn){usageHook=fn;},setTheme(p){palette=p;},setFail(v){fail=v;}};
 }
 
 test('Usage preserves History filters and renders native graphs with explicit filters',async()=>{
@@ -125,6 +127,8 @@ test('Usage preserves History filters and renders native graphs with explicit fi
   await p.click('usage-metric-cost');assert.equal(p.view.usageMetric,'cost');
   await p.click('usage-metric-limits');assert.equal(p.view.usageMetric,'limits');
   await p.click('usage-metric-tokens');await p.click('usage-trim');assert.equal(p.requests.at(-1).trim,true);
+  const retained=p.view.usageData;p.view.usageTrim=false;p.view.loadUsage(p.cx);
+  assert.equal(p.view.usageData,retained,'average-only updates must retain the scroll body while loading');await p.flush();
   await p.click('usage-breakdown-projects');assert.equal(p.view.usageBreakdown,'projects');
   await p.click('usage-breakdown-models');await p.click('usage-model-0');assert.equal(p.requests.at(-1).model,'claude:test-model');
   await p.click('usage-clear-model');assert.equal(p.requests.at(-1).model,'');
@@ -137,6 +141,7 @@ test('Usage custom dates, rates, report, error recovery and keyboard isolation',
   await p.click('usage-period-custom');p.view.usageFields.start.set_value('2026-11-01');p.view.usageFields.end.set_value('2026-11-12');
   await p.click('usage-apply-dates');assert.equal(p.requests.at(-1).start,'2026-11-01');
   await p.click('usage-rate-0');assert.equal(p.view.usageFields.model.value(),'test-model');
+  assert.equal(p.view.usageScroll.last,0,'a model-row rate editor must reveal its heading');
   await p.click('usage-save-rate');assert.ok(p.view.error.includes('all four'));assert.ok(p.view.usageFields.input.focusCount);
   for(const n of ['input','output','cacheRead','cacheWrite'])p.view.usageFields[n].set_value(n==='cacheRead'?'0':'1.25');
   await p.click('usage-save-rate');assert.equal(p.requests.at(-1).rate.cacheRead,0);assert.equal(p.requests.at(-1).rate.output,1.25);
@@ -160,6 +165,18 @@ test('Usage graphs follow community tokens and narrow panes retain independent s
   p.view.usagePeriod='90d';assert.equal(other.view.usagePeriod,'30d');assert.equal(other.view.hubView,'history');
   p.usageData.lastRefresh=null;await p.click('usage-period-7d');
   await p.click('usage-first-refresh');assert.ok(p.requests.some(r=>r.action==='usage-refresh'));
+});
+
+test('Usage stop preserves the completed batch and another refresh can finish',async()=>{
+  const p=await panel();await p.click('view-usage');
+  p.usageData.pending=2;
+  p.setUsageHook(async request=>{if(request.action==='usage-refresh')p.press('cancel-scan');});
+  await p.click('refresh');
+  assert.equal(p.requests.filter(r=>r.action==='usage-refresh').length,1);
+  assert.equal(p.view.usageData.totals.tokens,1050);assert.equal(p.view.busy,false);
+  assert.ok(p.view.notice.startsWith('Stopped'));
+  p.setUsageHook(null);p.usageData.pending=0;await p.click('refresh');
+  assert.equal(p.view.scanCancelled,false);assert.equal(p.view.usageData.pending,0);
 });
 
 test('panel search, filters, pagination and grouping run after initial render', async()=>{
