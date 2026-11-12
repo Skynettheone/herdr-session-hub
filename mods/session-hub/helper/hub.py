@@ -1205,7 +1205,10 @@ def usage_scan(store, row, cache, event_budget):
                     else:
                         rows, consumed, skip, bad, big = records_in(data, eof)
                     if consumed != len(data) or bad or big:
-                        rows = []
+                        # Gemini accounting deliberately requires a complete
+                        # bounded journal. Do not advertise another prefix batch
+                        # when this reader always starts at byte zero.
+                        rows, consumed, skip, big = [], 0, False, max(1, big)
                 except (ValueError, TypeError, RecursionError):
                     bad = 1
             else:
@@ -1374,13 +1377,16 @@ def rpc(store, req):
         store.set("profiles", profiles)
         if old and (not p["content"] or any(old.get(k) != p.get(k) for k in ("roots", "provider", "excluded", "configHome", "enabled"))):
             clear_content(store)
-        if old and any(old.get(k) != p.get(k) for k in ("roots", "provider", "excluded", "configHome")):
+        if old and any(old.get(k) != p.get(k) for k in ("roots", "provider", "excluded", "configHome", "projectPath")):
             records = []
             for row in store.get("records", []):
                 targets = [t for t in row["targets"] if t != p["id"]]
                 if targets:
                     records.append({**row, "targets": targets})
             store.set("records", records)
+            store.set("statuses", [s for s in store.get("statuses", []) if s.get("profile") != p["id"]])
+            store.set("cursor:" + p["id"], 0)
+            store.set("opencodeCursor:" + p["id"], 0)
         return {"saved": p["id"]}
     if action == "verify-version":
         profiles = store.get("profiles", [])

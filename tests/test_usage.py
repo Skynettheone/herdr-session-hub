@@ -379,6 +379,37 @@ class UsageIntegrationTests(unittest.TestCase):
             self.assertEqual(self.refresh_usage(store)["totals"]["tokens"],120)
         self.assertTrue(path.read_bytes().startswith(original))
 
+    def test_gemini_complete_journal_budget_cannot_loop_over_the_same_prefix(self):
+        import hashlib
+        config = self.base / "gemini/.gemini"
+        root = config / "tmp/project/chats"
+        root.mkdir(parents=True)
+        path = root / "session-budget.jsonl"
+        path.write_bytes(encoded([{"$set":dict(sessionId=ID,projectHash=hashlib.sha256(str(self.base).encode()).hexdigest(),messages=[])}]))
+        with hub.Store(self.base / "state") as store:
+            hub.rpc(store,dict(action="profile-save",profile=dict(id="gemini",provider="gemini",configHome=str(config),roots=[str(root)],executable="",content=False)))
+            hub.refresh(store)
+            with path.open("ab") as out:
+                out.write(encoded([{"type":"noop"}]*10001))
+            first = self.refresh_usage(store)
+            self.assertEqual(first["pending"],0)
+            self.assertIn("incomplete tail or replay budget",first["coverage"])
+            second = self.refresh_usage(store)
+            self.assertEqual(second["advanced"],0)
+
+    def test_editing_discovery_scope_invalidates_ready_status_and_cursor(self):
+        with hub.Store(self.base / "state") as store:
+            self.setup_store(store)
+            self.refresh_usage(store)
+            store.set("cursor:personal",100)
+            newroot = self.root / "new-empty-root"
+            newroot.mkdir()
+            hub.rpc(store,dict(action="profile-save",profile=dict(self.profile,roots=[str(newroot)])))
+            result = hub.rpc(store,dict(action="usage"))
+            self.assertEqual(result["sources"],0)
+            self.assertIn("history discovery has not run for this profile",result["coverage"])
+            self.assertEqual(store.get("cursor:personal"),0)
+
 
 if __name__ == "__main__":
     unittest.main()
