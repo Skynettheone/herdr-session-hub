@@ -16,7 +16,7 @@ project = base / "projects" / "Demo workspace"
 project.mkdir(parents=True, exist_ok=True)
 mod = app / "mods/session-hub"
 mod.mkdir(parents=True, exist_ok=True)
-for name in ("main.js", "model.js", "ui.js", "tabs.js", "mod.json"):
+for name in ("main.js", "model.js", "ui.js", "usage.js", "tabs.js", "mod.json"):
     shutil.copyfile(repo / "mods/session-hub" / name, mod / name)
 shutil.copytree(repo / "mods/session-hub/helper", mod / "helper", dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
 shutil.copytree(repo / "mods/session-hub/icons", mod / "icons", dirs_exist_ok=True)

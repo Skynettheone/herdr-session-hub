@@ -17,6 +17,14 @@ export default class SessionHub extends View {
     this.collapsed = {}; this.busy = false; this.error = ""; this.notice = "";
     this.detail = null; this.preview = null; this.settings = false; this.runtime = null;
     this.portable = null;
+    this.hubView = "history"; this.usagePeriod = "30d"; this.usageProvider = "all"; this.usageProfile = "";
+    this.usageMetric = "tokens"; this.usageBreakdown = "models"; this.usageTrim = false; this.usageModel = "";
+    this.usageData = null; this.usageLoading = false; this.usagePrices = false;
+    this.usageFields = {};
+    for (const [name, placeholder] of Object.entries({start:"YYYY-MM-DD",end:"YYYY-MM-DD",model:"Exact model identifier",
+      input:"USD / million",output:"USD / million",cacheRead:"USD / million",cacheWrite:"USD / million"})) {
+      this.usageFields[name] = InputState.new({placeholder});
+    }
     this.agents = agentCatalog(); this.catalogError = "";
     this.loading = true; this.width = 380; this.settingsSection = "profiles"; this.detailSection = "conversation";
     this.generation = 0; this.handle = cx.focus_handle();
@@ -33,7 +41,7 @@ export default class SessionHub extends View {
       executable: "Absolute CLI .exe", launchScript: "Provider Node launcher (optional)", projectPath: "Gemini original project path (optional)" })) {
       this.formFields[name] = InputState.new({ placeholder });
     }
-    for (const input of [this.search, this.alias, this.projectConfirm, this.profileEditor, this.bundlePath, ...Object.values(this.formFields)]) {
+    for (const input of [this.search, this.alias, this.projectConfirm, this.profileEditor, this.bundlePath, ...Object.values(this.formFields), ...Object.values(this.usageFields)]) {
       input.on("focus",(_event,cx)=>{this.activeInput=input;cx.notify();});
       input.on("blur",(_event,cx)=>{if(this.activeInput===input)this.activeInput=null;cx.notify();});
     }
@@ -152,6 +160,7 @@ export default class SessionHub extends View {
     cx.notify();
   }
   refresh(cx, content = false) {
+    if (this.hubView === "usage" && !this.settings && !content) { this.loadUsage(cx, true); return; }
     if (this.busy) return;
     this.busy = true; this.scanning = true; this.scanCancelled = false; this.error = "";
     this.notice = content ? "Indexing a bounded pass through opted-in profiles." : "Scanning approved roots; original histories stay read-only.";
@@ -178,6 +187,80 @@ export default class SessionHub extends View {
     this.detail = row; this.detailSection = "conversation"; this.preview = null; this.target = row.targets.length === 1 ? row.targets[0] : "";
     this.alias.set_value(row.alias || ""); this.projectConfirm.set_value(""); cx.notify();
     this.loadPreview(row,cx);
+  }
+
+  usageRequest() {
+    return {action:"usage",period:this.usagePeriod,provider:this.usageProvider,profile:this.usageProfile,
+      start:this.usageFields.start.value(),end:this.usageFields.end.value(),trim:this.usageTrim,model:this.usageModel};
+  }
+  switchView(name, cx) {
+    if(this.busy)return;
+    this.hubView=name; this.settings=false; this.error=""; this.notice="";
+    if(name==="usage")this.loadUsage(cx); else cx.notify();
+  }
+  loadUsage(cx, refresh=false, mutation=null) {
+    if(this.busy)return;
+    const snapshot=this.usageRequest();
+    const mutationAction=mutation?.action,removingRate=mutation?.rate===null;
+    const key=JSON.stringify(snapshot);
+    if(this.usageSnapshotKey!==key)this.usageData=null;
+    this.usageSnapshotKey=key;
+    this.busy=true;this.usageLoading=true;this.error="";this.scanning=refresh;this.scanCancelled=false;
+    if(refresh)this.notice="Reading recorded usage from approved history folders. Conversation search stays unchanged.";
+    cx.notify();
+    cx.spawn(async cx=>{
+      try {
+        if(refresh) {
+          let left=0,passes=0;
+          do {
+            const found=await this.rpc({action:"refresh",content:false,profile:snapshot.profile});
+            left=Math.max(0,...found.statuses.map(s=>s.remaining||0));
+            this.notice="Discovering local histories · "+left+" remaining";cx.notify();
+          } while(left>0 && !this.scanCancelled && ++passes<200);
+        }
+        let passes=0;
+        do {
+          const action=mutation?.action || (refresh&&!this.scanCancelled?"usage-refresh":"usage");
+          this.usageData=await this.rpc({...snapshot,action,...mutation});
+          mutation=null;
+          this.notice=refresh?"Usage batch "+(++passes)+" · "+this.usageData.pending+" sources remaining":"";
+          cx.notify();
+        } while(refresh && this.usageData.pending>0 && this.usageData.advanced>0 && !this.scanCancelled && passes<200);
+        if(refresh)this.notice=this.scanCancelled?"Stopped after this batch. Recorded totals are saved; refresh to continue.":
+          this.usageData.pending?"Some sources still need a refresh. See coverage below.":"Recorded usage refreshed. See coverage for unavailable or partial histories.";
+        else if(mutationAction==="usage-price")this.notice=removingRate?"Local model rate removed. Unknown prices stay unavailable.":"Local model rates saved. Estimates have been recalculated.";
+        else if(mutationAction==="usage-clear")this.notice="Numeric usage cache cleared. Local model rates are retained.";
+        if(refresh) {const request=requestFor(this);this.publishList(await this.rpc(request),request);}
+      } catch(error){this.error=safeText(error.message,500);}
+      finally{this.usageLoading=false;this.finishOperation(cx);}
+    });
+  }
+  editUsageRate(key, cx) {
+    const split=key.indexOf(":");this.usageRateProvider=key.slice(0,split);this.usagePrices=true;
+    this.usageFields.model.set_value(key.slice(split+1));
+    const rate=this.usageData?.rates?.[key];
+    for(const name of ["input","output","cacheRead","cacheWrite"])this.usageFields[name].set_value(rate?String(rate[name]):"");
+    cx.notify();
+  }
+  saveUsageRate(cx, remove=false) {
+    const model=this.usageFields.model.value().trim(),rate={};
+    if(!model){this.error="Enter the exact model identifier before saving rates.";this.usageFields.model.focus();cx.notify();return;}
+    for(const name of ["input","output","cacheRead","cacheWrite"]) {
+      const raw=this.usageFields[name].value().trim(),value=Number(raw);
+      if(!remove && (!raw || !Number.isFinite(value) || value<0 || value>1000000)) {
+        this.error="Enter all four USD rates per million tokens. Use 0 only when you know that channel is free.";
+        this.usageFields[name].focus();cx.notify();return;
+      }
+      rate[name]=value;
+    }
+    this.loadUsage(cx,false,{action:"usage-price",rateProvider:this.usageRateProvider||"claude",rateModel:model,rate:remove?null:rate});
+  }
+  copyUsage(cx) {
+    if(!this.usageData)return;
+    const {totals,start,end,coverage}=this.usageData;
+    cx.write_to_clipboard(JSON.stringify({kind:"Herdr Session Hub recorded local usage",start,end,timezone:"UTC",totals,
+      costNote:"Known API-equivalent USD cost, not subscription billing. See pricedEvents coverage.",coverage},null,2));
+    this.notice="Aggregate report copied. It contains no transcript text, paths or profile names.";cx.notify();
   }
   loadPreview(row,cx) {
     const generation = ++this.previewGeneration;
@@ -270,15 +353,15 @@ export default class SessionHub extends View {
       else { this.detail = null; this.settings = false; cx.notify(); }
     }
     if (event.key === "f5") { this.refresh(cx); cx.stop_propagation(); }
-    if ((event.key === "f" && event.modifiers?.control) || (event.key === "/" && !this.activeInput)) {
+    if (this.hubView === "history" && ((event.key === "f" && event.modifiers?.control) || (event.key === "/" && !this.activeInput))) {
       this.search.focus(); cx.stop_propagation();
     }
-    if (!this.activeInput && !this.detail && ["up", "down"].includes(event.key)) {
+    if (this.hubView === "history" && !this.activeInput && !this.detail && ["up", "down"].includes(event.key)) {
       const delta = event.key === "up" ? -1 : 1;
       this.selected = Math.max(0, Math.min(this.data.rows.length - 1, (this.selected ?? -1) + delta));
       cx.notify(); cx.stop_propagation();
     }
-    if (!this.activeInput && event.key === "enter" && !this.detail && this.data.rows[this.selected]) this.choose(this.data.rows[this.selected], cx);
+    if (this.hubView === "history" && !this.activeInput && event.key === "enter" && !this.detail && this.data.rows[this.selected]) this.choose(this.data.rows[this.selected], cx);
   }
 
   render(cx) { return this.isTabHost?renderTabs.call(this,cx):renderPanel(this, cx, theme()); }

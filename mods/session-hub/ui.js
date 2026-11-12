@@ -1,6 +1,7 @@
 import { div, svg, image } from "gpui-kit";
 import { h_flex, v_flex, Button, Input, Textarea } from "gpui-base";
 import { semanticTheme, safeText, groupRows, providers, providerName, projectName, shortTime, canPage, historyCapability, sessionProfiles } from "./model.js";
+import { renderUsage } from "./usage.js";
 
 export function renderPanel(v, cx, rawTheme) {
   const t = semanticTheme(rawTheme), wide = (v.width || 380) >= 760;
@@ -44,14 +45,14 @@ export function renderPanel(v, cx, rawTheme) {
   const root = v_flex().id("session-hub-root").track_focus(v.handle).on_key_down((e, cx) => v.key(e, cx))
     .on_size_change((size, cx) => { if (Math.abs((v.width || 0) - size.width) > 1) { v.width = size.width; cx.notify(); } })
     .size_full().min_w(0).min_h(0).rounded(10).overflow_hidden().bg(t.chrome).border_1().border_color(t.border).text_color(t.foreground).text_size(12);
-  const back = v.settings || (v.detail && !wide);
+  const back = v.settings || (v.hubView !== "usage" && v.detail && !wide);
   root.child(h_flex().h(46).flex_none().px(12).gap(8).items_center().border_b_1().border_color(t.border)
     .child(back ? button("back", "Back to history", cx => { v.settings = false; v.detail = null; cx.notify(); }, {icon:"back",iconOnly:true}) : image("mods/session-hub/assets/herdr-logo.svg").w(23).h(23).rounded(5).flex_none())
-    .child(text(v.settings ? "History settings" : "History",t.foreground,14).font_semibold())
-    .when(!v.settings, e => e.child(badge(String(v.data.total))))
+    .child(text(v.settings ? "History settings" : v.hubView === "usage" ? "Usage" : "History",t.foreground,14).font_semibold())
+    .when(!v.settings && v.hubView !== "usage", e => e.child(badge(String(v.data.total))))
     .child(div().flex_1())
     .when(!!v.overlay,e=>e.child(button("dock-sidebar","Dock as side panel",cx=>v.dockSidebar(cx),{icon:"sidebar",iconOnly:true})))
-    .child(button("refresh", v.busy ? "Working" : "Refresh history", cx => v.refresh(cx), {icon:"refresh",iconOnly:true}))
+    .child(button("refresh", v.busy ? "Working" : v.hubView === "usage" ? "Refresh recorded usage" : "Refresh history", cx => v.refresh(cx), {icon:"refresh",iconOnly:true}))
     .child(button("settings", "History settings", cx => { v.settings = !v.settings; v.detail = null; cx.notify(); }, {icon:"settings",iconOnly:true,selected:v.settings}))
     .when(!!v.panel,e=>e.child(button("collapse-history","Collapse History",()=>v.collapsePanel(),{icon:"sidebar",iconOnly:true}))));
   if (v.error) root.child(h_flex().px(13).py(9).gap(8).items_center().bg(t.surface).border_b_1().border_color(t.border)
@@ -270,12 +271,16 @@ export function renderPanel(v, cx, rawTheme) {
     return settings;
   }
 
+  if(!v.settings) root.child(h_flex().px(12).py(6).gap(4).flex_none().border_b_1().border_color(t.border)
+    .child(button("view-history","History",cx=>v.switchView("history",cx),{selected:v.hubView!=="usage",icon:"history"}))
+    .child(button("view-usage","Usage",cx=>v.switchView("usage",cx),{selected:v.hubView==="usage"})));
   if(v.settings) root.child(settingsPane());
+  else if(v.hubView === "usage") root.child(renderUsage(v,cx,{t,text,button,input,section,agentIcon}));
   else if(wide) root.child(h_flex().flex_1().min_h(0)
     .child(v_flex().w(340).flex_none().h_full().border_r_1().border_color(t.border).child(listPane()))
     .child(detailPane(v.detail)));
   else root.child(v.detail?detailPane(v.detail):listPane());
-  if(!v.settings) {
+  if(!v.settings && v.hubView !== "usage") {
     const partial=v.data.statuses.some(s=>s.state!=="ready");
     root.child(Button.new("source-status").accessibility_label("Source diagnostics").h(30).flex_none().px(12).flex().gap(7).items_center()
       .border_t_1().border_color(t.border).bg(t.chrome).cursor_pointer().on_click((_e,cx)=>{v.showDiagnostics=!v.showDiagnostics;cx.notify();})
