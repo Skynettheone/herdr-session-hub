@@ -63,7 +63,7 @@ export default class SessionHub extends View {
         if (runtime.schema !== 1 || !runtime.python || !runtime.helper || !runtime.state) throw new Error("Unsupported helper configuration");
         this.runtime = runtime;
         const version = await exec(runtime.herdr || "herdr-app", ["--version"], { timeout: 8000 });
-        this.launchCompatible = version.code === 0 && version.stdout.trim() === "herdr-app 0.1.15";
+        this.launchCompatible = !!nativeBase.ScrollHandle && version.code === 0 && version.stdout.trim() === "herdr-app 0.1.15";
         if (!this.launchCompatible) this.notice = "Herdr version is outside the tested SDK. History browsing is available; resume is disabled pending compatibility review.";
         const snapshot = requestFor(this);
         this.publishList(await this.rpc(snapshot), snapshot);

@@ -181,6 +181,7 @@ test('Usage stop preserves the completed batch and another refresh can finish',a
 
 test('older SDK without ScrollHandle still loads History, Usage and the header',async()=>{
   const p=await panel(null,{},null,true);p.draw();assert.equal(p.view.usageScroll,null);
+  assert.equal(p.view.launchCompatible,false,'an older host must not inherit a newer Herdr executable on PATH');
   await p.click('view-usage');await p.click('usage-rate-0');assert.equal(p.view.usageFields.model.value(),'test-model');
   const header=await panel(null,{role:'tabs'},null,true);header.draw();assert.equal(header.view.scroll,null);
 });
