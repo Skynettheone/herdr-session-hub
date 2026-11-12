@@ -24,7 +24,7 @@ def encoded(rows):
 
 
 def claude(identity="bill-1", output=20):
-    return {"type": "assistant", "sessionId": ID, "timestamp": AT, "requestId": "req-1",
+    return {"type": "assistant", "sessionId": ID, "version": "2.1.322", "timestamp": AT, "requestId": "req-1",
             "message": {"id": identity, "model": "test-model", "role": "assistant", "content": "DO NOT CACHE TEXT",
                         "usage": {"input_tokens": 10, "output_tokens": output,
                                   "cache_read_input_tokens": 70, "cache_creation_input_tokens": 5}}}
@@ -131,6 +131,23 @@ class AccountingTests(unittest.TestCase):
             self.assertFalse(events)
             self.assertTrue(warnings)
 
+    def test_invalid_cumulative_is_not_treated_as_legacy_request(self):
+        header = {"type": "session_meta", "payload": {"id": ID}}
+        for invalid in (tokens(inp=-1), tokens(inp=10, read=30), {"input_tokens": "100"}):
+            events, _, warnings, _ = usage.parse("codex", [header, codex(tokens(), invalid)])
+            self.assertFalse(events)
+            self.assertIn("invalid Codex usage", warnings)
+        invalid = tokens()
+        invalid["total_tokens"] = 999
+        self.assertFalse(usage.parse("codex", [header, codex(invalid, invalid)])[0])
+
+    def test_same_name_projects_remain_separate(self):
+        a = dict(usage.parse("claude", [claude("a")])[0][0], project="project", projectIdentity="first")
+        b = dict(usage.parse("claude", [claude("b")])[0][0], project="project", projectIdentity="second")
+        result = usage.aggregate([a, b], {"period": "7d"}, {}, NOW)
+        self.assertEqual(len(result["projects"]), 2)
+        self.assertTrue(all(p["label"] == "project" for p in result["projects"]))
+
 
 class UsageIntegrationTests(unittest.TestCase):
     def setUp(self):
@@ -211,7 +228,7 @@ class UsageIntegrationTests(unittest.TestCase):
             codex_root = self.base / "codex/sessions"
             codex_root.mkdir(parents=True)
             path = codex_root / ("rollout-date-" + ID + ".jsonl.zst")
-            data = encoded([{"type": "session_meta", "payload": {"id": ID}}, codex(tokens(), tokens())])
+            data = encoded([{"type": "session_meta", "payload": {"id": ID, "cwd": str(self.base), "cli_version": "0.164.0"}}, codex(tokens(), tokens())])
             path.write_bytes(zstd.compress(data))
             p = dict(self.profile, id="codex", provider="codex", roots=[str(codex_root)], configHome=str(codex_root.parent))
             hub.rpc(store, dict(action="profile-save", profile=p))
@@ -231,6 +248,37 @@ class UsageIntegrationTests(unittest.TestCase):
                 result = self.refresh_usage(store)
             self.assertEqual(result["totals"]["events"], 0)
             self.assertIn("source unavailable or changed during read", result["coverage"])
+
+    def test_separate_stores_do_not_merge_reused_native_or_billing_ids(self):
+        other = self.base / "work/projects"
+        other.mkdir(parents=True)
+        (other / self.path.name).write_bytes(self.path.read_bytes())
+        with hub.Store(self.base / "state") as store:
+            self.setup_store(store)
+            hub.rpc(store, dict(action="profile-save", profile=dict(self.profile, id="work", roots=[str(other)], configHome=str(other.parent))))
+            hub.refresh(store)
+            result = self.refresh_usage(store)
+            self.assertEqual(result["totals"]["events"], 2)
+            self.assertEqual(result["totals"]["sessions"], 2)
+            selected = hub.rpc(store, dict(action="usage", profile="work", period="90d"))
+            self.assertEqual(selected["totals"]["events"], 1)
+
+    def test_record_budget_continues_even_when_byte_window_reaches_eof(self):
+        # 10,001 small committed records fit in one byte window but not one parse batch.
+        self.path.write_bytes(encoded([{"type":"ignored"}] * 10000 + [claude()]))
+        with hub.Store(self.base / "state") as store:
+            self.setup_store(store)
+            # Initial discovery cannot see the trailing usage/version; expose a valid
+            # synthetic metadata version at the beginning as a native file would.
+            data = self.path.read_bytes()
+            self.path.write_bytes(encoded([dict(type="user", sessionId=ID, version="2.1.322")])+data)
+            hub.refresh(store)
+            first = self.refresh_usage(store)
+            self.assertEqual(first["pending"], 1)
+            self.assertEqual(first["totals"]["events"], 0)
+            second = self.refresh_usage(store)
+            self.assertEqual(second["pending"], 0)
+            self.assertEqual(second["totals"]["events"], 1)
 
 
 if __name__ == "__main__":

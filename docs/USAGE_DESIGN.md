@@ -60,6 +60,14 @@ snapshots are skipped; a first or restarted counter uses only an attributable
 last request. Ambiguous gaps and fork inheritance are excluded with coverage
 warnings. This conservative boundary is preferable to inflated totals.
 
+Local stores with different config homes have separate billing/session namespaces.
+Explicit shared physical sources join those namespaces; aliases/forks inside the
+same local store still deduplicate stable billed IDs. This does not identify a
+cloud account. Project groups use the full normalized recorded cwd identity,
+with only a safe basename displayed; equal basenames do not merge directories.
+Source format gates and partial coverage are explicit. A short byte window that
+hits the JSON record budget continues in another batch even at filesystem EOF.
+
 Required gates: adversarial parser/accounting fixtures, incremental and encrypted
 state integration tests, host UI behavior tests, installed SDK check, disposable
 native GUI interaction/graph checks, manual security review, essential CI and

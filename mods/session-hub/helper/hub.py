@@ -1119,6 +1119,32 @@ def usage_guard(path, offset):
     return hashlib.sha256(head + tail).hexdigest()
 
 
+def usage_namespaces(store, sources):
+    """Declared local stores are separate unless a shared physical source joins them.
+
+    These are local scope identities, not inferred cloud account identities.
+    Copies/forks within one store still share billed-message deduplication.
+    """
+    profiles = {p["id"]: p for p in store.get("profiles", [])}
+    parent, groups = {}, {}
+    def representative(value):
+        parent.setdefault(value, value)
+        while value != parent[value]:
+            parent[value] = parent[parent[value]]
+            value = parent[value]
+        return value
+    for row in sources:
+        scopes = sorted({digest([row["provider"], os.path.normcase(os.path.normpath(profiles[t]["configHome"]))])
+                         for t in row["targets"] if t in profiles})
+        if not scopes:
+            scopes = [row["canonicalSourceIdentity"]]
+        for scope in scopes:
+            a, b = representative(scopes[0]), representative(scope)
+            parent[max(a, b)] = min(a, b)
+        groups[row["canonicalSourceIdentity"]] = scopes[0]
+    return {identity: representative(scope) for identity, scope in groups.items()}
+
+
 def usage_database(row, cache):
     path = source_file(row["sourcePath"], row["root"])
     db, before = opencode_snapshot(path, row["root"])
@@ -1156,7 +1182,7 @@ def usage_scan(store, row, cache, event_budget):
     stamp = opencode_fingerprint(path, row["root"]) if row["sourceKind"] == "database" else file_stamp(path)
     old_stamp = cache.get("stamp", [])
     if row["sourceKind"] == "database":
-        if old_stamp != stamp:
+        if old_stamp != stamp or cache.get("version") != parser.VERSION:
             cache = {}
         rows, cursor, pending, bad, stamp = usage_database(row, cache)
         offset, skip, big, waiting = 0, False, 0, False
@@ -1169,7 +1195,7 @@ def usage_scan(store, row, cache, event_budget):
             cache, offset = {}, 0
         data, rows, consumed, skip, bad, big, eof = source_records(row["provider"], path, offset, cache.get("skip", False))
         offset += consumed
-        pending = not eof and consumed > 0
+        pending = consumed > 0 and (not eof or b"\n" in data[consumed:])
         waiting = not pending and (not eof or consumed != len(data))
         cursor = None
         if file_stamp(path) != stamp:
@@ -1191,7 +1217,7 @@ def usage_scan(store, row, cache, event_budget):
         if count:
             prior[code] = prior.get(code, 0) + count
     return dict(version=parser.VERSION, stamp=stamp, offset=offset, cursor=cursor, skip=skip, pending=pending,
-                state=state, events=merged, warnings=prior, limits=(cache.get("limits", []) + limits)[-4:],
+                state=state, events=merged, warnings=prior, limits=sorted(cache.get("limits", []) + limits, key=lambda x: x["at"], reverse=True)[:4],
                 guard=usage_guard(path, offset) if row["sourceKind"] != "database" else None,
                 at=dt.datetime.now(dt.timezone.utc).isoformat(), limited=limited)
 
@@ -1223,6 +1249,7 @@ def usage_rpc(store, req):
         store.dirty, store.purge_backup = True, True
         store.set("usage:lastRefresh", None)
     sources = list(usage_sources(store, req))
+    namespaces = usage_namespaces(store, sources)
     all_events, coverage, limits, pending = [], {}, [], 0
     advanced, count, deadline = 0, 0, time.monotonic() + 4
     budget = parser.MAX_EVENTS - sum(len(json.loads(v).get("events", [])) for (v,) in store.db.execute("SELECT v FROM kv WHERE k LIKE 'usage:file:%'"))
@@ -1231,6 +1258,9 @@ def usage_rpc(store, req):
         cache = store.get(cachekey, {})
         if row["provider"] == "copilot":
             coverage["Copilot usage is not persisted by the native CLI"] = coverage.get("Copilot usage is not persisted by the native CLI", 0) + 1
+            continue
+        if not row.get("formatSupported"):
+            coverage["unsupported or unverified history format"] = coverage.get("unsupported or unverified history format", 0) + 1
             continue
         try:
             path = source_file(row["sourcePath"], row["root"])
@@ -1246,12 +1276,17 @@ def usage_rpc(store, req):
                 needs = cache["pending"]
             if needs:
                 pending += 1
+            if cache.get("version") != parser.VERSION:
+                continue
             if row.get("stale"):
                 coverage["history discovery is incomplete or stale"] = coverage.get("history discovery is incomplete or stale", 0) + 1
             for code, n in cache.get("warnings", {}).items():
                 coverage[code] = coverage.get(code, 0) + n
             for item in cache.get("events", []):
-                all_events.append({**item, "session": digest([row["provider"], row["nativeId"]]),
+                scope = namespaces[row["canonicalSourceIdentity"]]
+                all_events.append({**item, "id": digest([scope, item["id"]]),
+                                   "session": digest([scope, row["provider"], row["nativeId"]]),
+                                   "projectIdentity": digest(os.path.normcase(os.path.normpath(row.get("cwd") or "Unknown project"))),
                                    "project": redact(clean(Path(row.get("cwd") or "Unknown project").name, 120))})
             for limit in cache.get("limits", []):
                 limits.append({**limit, "provider": row["provider"], "profiles": row["targets"]})

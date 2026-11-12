@@ -12,7 +12,7 @@ import math
 import re
 
 CHANNELS = ("input", "output", "cacheRead", "cacheWrite")
-VERSION = 1
+VERSION = 2
 MAX_EVENTS = 200000
 UTC = dt.timezone.utc
 
@@ -158,7 +158,8 @@ def parse(provider, rows, state=None):
                 info = obj(p.get("info"))
                 last = codex_counts(info.get("last_token_usage"))
                 total = codex_counts(info.get("total_token_usage"))
-                if last is None or not at or "native" not in state:
+                has_total = info.get("total_token_usage") is not None
+                if last is None or (has_total and total is None) or not at or "native" not in state:
                     if info:
                         warn("invalid Codex usage")
                     continue
@@ -172,6 +173,10 @@ def parse(provider, rows, state=None):
                     warn("ambiguous Codex fork inheritance")
                     continue
                 if not sum(last):
+                    continue
+                raw_last = obj(info.get("last_token_usage"))
+                if raw_last.get("total_tokens", sum(last)) != sum(last) or total and any(total[i] < last[i] for i in range(4)):
+                    warn("inconsistent Codex request counters")
                     continue
                 if previous is None and total and total != last:
                     warn("unattributed initial Codex cumulative prefix")
@@ -260,8 +265,9 @@ def aggregate(events, request, rates, now=None):
         cost, savings = price(item, rates)
         day = dt.datetime.fromisoformat(item["at"]).strftime(fmt)
         model = item["provider"] + ":" + item["model"]
-        project, session = item.get("project", "Unknown project"), item.get("session", item["id"])
-        for target in (totals, models.setdefault(model, zero()), projects.setdefault(project, zero()),
+        project, session = item.get("projectIdentity", item.get("project", "Unknown project")), item.get("session", item["id"])
+        project_group = projects.setdefault(project, dict(zero(), label=item.get("project", "Unknown project")))
+        for target in (totals, models.setdefault(model, zero()), project_group,
                        providers.setdefault(item["provider"], zero()), days[day], sessions.setdefault(session, zero())):
             add(target, item, cost, savings)
         add(days[day].setdefault("series", {}).setdefault(item["provider"], zero()), item, cost, savings)
