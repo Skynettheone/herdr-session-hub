@@ -1,6 +1,7 @@
 """Adversarial release inputs, without executing bundled code or provider CLIs."""
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -21,6 +22,7 @@ class PackageTests(unittest.TestCase):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"synthetic package payload")
+        (self.root / "version.json").write_text(json.dumps(dict(platform="windows-x64",version="0.1.0-dev")))
         self.manifest()
 
     def tearDown(self):
@@ -93,6 +95,23 @@ class PackageTests(unittest.TestCase):
         os.symlink(self.root, alias, target_is_directory=True)
         with self.assertRaisesRegex(ValueError, "Linked"):
             package.verify(alias)
+
+    def test_declared_platform_requires_its_own_offline_wheels(self):
+        (self.root / "version.json").write_text(json.dumps(dict(platform="linux-x64",version="0.1.0-dev")))
+        self.manifest()
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            package.verify(self.root)
+        for name in package.target_files("linux-x64"):
+            path = self.root / name
+            if not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"synthetic Linux payload")
+        self.manifest()
+        self.assertGreater(package.verify(self.root), len(package.REQUIRED))
+        (self.root / "version.json").write_text(json.dumps(dict(platform="unverified-os")))
+        self.manifest()
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            package.verify(self.root)
 
 
 if __name__ == "__main__":

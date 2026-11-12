@@ -11,6 +11,8 @@ __pycache__/
 *.lock
 !requirements-windows.lock
 !requirements-dev-windows.lock
+!requirements-linux-x64.lock
+!requirements-macos-arm64.lock
 runtime.json
 mods/session-hub/*.d.ts
 mods/session-hub/jsconfig.json

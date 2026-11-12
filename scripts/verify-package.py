@@ -1,5 +1,6 @@
 """Bounded package integrity check. Hashes do not authenticate a publisher."""
 import hashlib
+import json
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -21,6 +22,21 @@ REQUIRED = frozenset({
 })
 PRIVATE = frozenset({"runtime.json", "auth.json", "state.hub", ".dev", ".research", ".venv", "__pycache__"})
 MAX_FILES, MAX_BYTES = 4096, 256 * 1024 * 1024
+WHEELS = {
+    "windows-x64": ("cryptography-50.0.2-cp311-abi3-win_amd64.whl", "cffi-2.1.1-cp314-cp314-win_amd64.whl"),
+    "linux-x64": ("cryptography-50.0.2-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+                  "cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"),
+    "macos-arm64": ("cryptography-50.0.2-cp311-abi3-macosx_11_0_arm64.whl", "cffi-2.1.1-cp314-cp314-macosx_11_0_arm64.whl"),
+}
+LOCKFILES = {"windows-x64": "requirements-windows.lock", "linux-x64": "requirements-linux-x64.lock", "macos-arm64": "requirements-macos-arm64.lock"}
+CORE_REQUIRED = REQUIRED - {"requirements-windows.lock", *("wheelhouse/" + name for name in WHEELS["windows-x64"])}
+
+
+def target_files(target):
+    if not isinstance(target, str) or target not in WHEELS:
+        raise ValueError("Unsupported package platform")
+    required = CORE_REQUIRED | {LOCKFILES[target], *("wheelhouse/" + name for name in WHEELS[target])}
+    return required if target == "windows-x64" else required | {"scripts/install.py"}
 
 
 def regular(path, directory=False):
@@ -57,8 +73,14 @@ def verify(root):
         expected[name] = checksum
         if len(expected) > MAX_FILES:
             raise ValueError("Package file budget exceeded")
-    if not REQUIRED.issubset(expected):
+    if not CORE_REQUIRED.issubset(expected):
         raise ValueError("Incomplete package; required runtime, installer or wheel missing")
+    version_path = root / "version.json"
+    if regular(version_path).st_size > 16384:
+        raise ValueError("Oversized package configuration")
+    config = json.loads(version_path.read_text(encoding="utf-8"))
+    if not isinstance(config, dict) or not target_files(config.get("platform")).issubset(expected):
+        raise ValueError("Incomplete package for its declared platform")
     actual, total = set(), 0
     for folder, directories, files in os.walk(root, followlinks=False):
         for name in directories:

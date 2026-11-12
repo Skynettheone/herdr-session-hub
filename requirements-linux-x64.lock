@@ -1,0 +1,4 @@
+# CPython 3.14, linux-x64. Exact official PyPI binary wheel hashes; 2026-11-12.
+cryptography==50.0.2 --hash=sha256:630ebfea3bf689d075f82316324ff7433dc447fe6bc1bfc76524b74b4a9567d2
+cffi==2.1.1 --hash=sha256:b0431303acaea1089ad4b3e9ce4e6518193def1118d4073ca848635ee4ea2e96
+pycparser==3.12 --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e
