@@ -1,5 +1,65 @@
 # Release preparation report — 2026-11-12
 
+## Current Usage candidate
+
+The final runtime is `25e9dabd841fd119a4ea327c56a326fdf12b803a`;
+acceptance documentation/captures are committed at `903528f`. This supersedes
+the older History-only artifact entries retained below. Version remains
+**0.1.0-dev / releaseReady=false**; no production installation or release/gallery
+publication was performed.
+
+The final build passed **76 Python tests in 30.581 seconds**, **17 UI host groups**,
+Ruff, installed Herdr SDK validation and offline hashed-wheel verification.
+A 10,000-record list/search sample took 0.264 seconds, without a performance
+guarantee. The independent Usage oracle matched all four presets, token channels,
+event counts, timeline/model sums and known estimated costs. Native dark/light/
+community and narrow/wide checks, approved rate removal/restoration and cache
+clear/rebuild passed; originals matched and content-search flags stayed Off.
+The isolated app/core were stopped with final native `errors: []`.
+
+Exact-runtime hosted CI passed:
+[Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43187672204)
+and [combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43187672208).
+The repository had zero open code-scanning alerts at the final query. Workflow
+scope remains one Windows job and one combined CodeQL job; no CD/publication job.
+
+Separate standards/security and spec review found six issues, all fixed and
+regression-tested, with follow-up confirmations. This is implementer-team review,
+not an external human audit. The actual older 0.1.14 SDK check exposed a missing
+scroll export; the guarded fallback passes 0.1.14/0.1.15 checks and preserves the
+older-host continuation block. Interactive Usage acceptance is on 0.1.15.
+The earlier complete updater/backup rollback evidence remains separately scoped.
+
+Offline disposable installation, upgrade backup, uninstall WhatIf, retained
+state, explicit Hub-only purge and unchanged layout/key/original sentinels passed.
+The final archive is checked after fresh extraction, including manifest integrity,
+source-byte comparisons and an isolated packaged helper invocation. Its sidecar
+checksum is external; the post-build artifact receipt below is intentionally
+outside the archive to avoid a checksum/report cycle. Runtime code is not changed
+by this documentation refresh.
+
+Live account-wide limits, subscription bills, Copilot persisted usage, ambiguous
+Codex fork reconstruction and distinct-company account verification remain
+documented limits. See USAGE_ACCEPTANCE.md, USAGE_REVIEW.md and USER_GUIDE.md for
+the precise verified scope. These checks do not certify every possible history,
+community palette, provider version or future Herdr SDK.
+
+## Verified Usage artifact receipt
+
+`herdr-session-hub-0.1.0-dev-windows-x64-20261112090853.zip`, **5,017,879 bytes**.
+SHA-256: `2abbb1f2eddcd1e97dc0a007f8ceda948b01dc299b02197cef8e5b735f894ce2`.
+
+Staging and fresh extraction verified **110 manifest files**; all **57**
+runtime/script/test/artwork payload files match the tested repository bytes.
+The fresh packaged helper passed an isolated numeric-refresh invocation,
+and the extracted native mod passed the installed SDK check. No development
+state, auth files or local runtime configuration is included. The final
+archive and its external `.zip.sha256` sidecar remain local; no release
+was published. This receipt was appended after hashing and intentionally
+does not change the verified archive.
+
+## Historical History-only candidate evidence
+
 Version **0.1.0-dev**, Windows x64, Python 3.14, Herdr GUI 0.1.15/core 0.1.20.
 The source tasks are committed conventionally on main at the user-authorized
 origin. No production install, original-history deletion, GitHub Release or
