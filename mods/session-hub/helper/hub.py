@@ -6,6 +6,7 @@ Python 3.14 is required for the standard-library zstd reader.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import ctypes
 from ctypes import wintypes
 import datetime as dt
@@ -28,7 +29,7 @@ import uuid
 from compression import zstd
 
 SCHEMA = 2
-PARSER = 2
+PARSER = 4
 CHUNK = 2 * 1024 * 1024
 LINE = 1024 * 1024
 MAX_STATE = 256 * 1024 * 1024
@@ -531,18 +532,60 @@ def scan_file(store, profile, path, root, full=False):
             "targets": [profile["id"]], "stale": False}
 
 
+def opencode_fingerprint(path, root):
+    wal = path.with_name(path.name + "-wal")
+    return [file_stamp(path), file_stamp(source_file(wal, root)) if wal.exists() else None]
+
+
+def offline_source(path):
+    """Windows share-deny-write handle, including checkpoint/rename protection."""
+    if os.name != "nt":
+        raise HubError("Offline database snapshots require Windows in this build")
+    import msvcrt
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    k.CreateFileW.restype = wintypes.HANDLE
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = k.CreateFileW(str(path), 0x80000000, 1, None, 3, 0x80, None)
+    if handle == ctypes.c_void_p(-1).value:
+        raise HubError("OpenCode is open for writing or inaccessible; close it before refreshing")
+    try:
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
+    except Exception:
+        k.CloseHandle(handle)
+        raise
+    return os.fdopen(descriptor, "rb")
+
+
+def opencode_snapshot(path, root):
+    # Stat timestamps alone are insufficient on Windows while a writer holds
+    # handles. Hold DB and WAL share-deny-write handles together before reading.
+    # Existing writers fail this acquisition; new writers/checkpoints cannot open.
+    with contextlib.ExitStack() as stack:
+        source = stack.enter_context(offline_source(path))
+        wal = path.with_name(path.name + "-wal")
+        wal_source = stack.enter_context(offline_source(source_file(wal, root))) if wal.exists() else None
+        before = opencode_fingerprint(path, root)
+        if sum(stamp[2] for stamp in before if stamp) > _adapters.sqlite_snapshot.LIMIT:
+            raise HubError("OpenCode database/WAL exceeds the 128 MiB snapshot budget")
+        data = source.read(_adapters.sqlite_snapshot.LIMIT + 1)
+        if len(data) > _adapters.sqlite_snapshot.LIMIT:
+            raise HubError("OpenCode snapshot grew beyond its read budget")
+        remaining = _adapters.sqlite_snapshot.LIMIT - len(data)
+        journal = wal_source.read(remaining + 1) if wal_source else b""
+        if len(journal) > remaining:
+            raise HubError("OpenCode WAL grew beyond its read budget")
+        if opencode_fingerprint(path, root) != before:
+            raise HubError("OpenCode changed during snapshot; refresh and retry")
+    return _adapters.sqlite_snapshot.connect(data, journal), before
+
+
 def opencode_rows(profile):
-    """Immutable read-only SQLite; refuse live WAL rather than read stale main DB."""
+    """Query only a validated in-memory committed DB/WAL image."""
     records = []
     for root in profile["roots"]:
         path = source_file(Path(root) / "opencode.db", root)
-        wal = path.with_name(path.name + "-wal")
-        if wal.exists() and wal.stat().st_size:
-            raise HubError("OpenCode has a WAL; close it and checkpoint through OpenCode before scanning")
-        before = file_stamp(path)
-        if before[2] > 128 * CHUNK:
-            raise HubError("OpenCode database exceeds the read-only snapshot budget")
-        db = sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True, timeout=1)
+        db, before = opencode_snapshot(path, root)
         try:
             db.execute("PRAGMA query_only=ON")
             db.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 1000)
@@ -563,20 +606,17 @@ def opencode_rows(profile):
                                 "targets": [profile["id"]], "stale": False, "indexComplete": False})
         finally:
             db.close()
-        if file_stamp(path) != before or (wal.exists() and wal.stat().st_size):
+        if opencode_fingerprint(path, root) != before:
             raise HubError("OpenCode changed while reading; previous results retained")
     return records
 
 
 def opencode_messages(record, cursor=None, limit=30):
     path = source_file(record["sourcePath"], record["root"])
-    wal = path.with_name(path.name + "-wal")
-    if wal.exists() and wal.stat().st_size:
-        raise HubError("OpenCode has live WAL data; content is unavailable until checkpointed by OpenCode")
-    before = file_stamp(path)
+    db, before = opencode_snapshot(path, record["root"])
     if before != record["fingerprint"]:
+        db.close()
         raise HubError("OpenCode database changed; refresh before preview")
-    db = sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True, timeout=1)
     messages, malformed = [], 0
     cursor = cursor or [-1, ""]
     try:
@@ -602,7 +642,7 @@ def opencode_messages(record, cursor=None, limit=30):
                 malformed += 1
     finally:
         db.close()
-    if file_stamp(path) != before or (wal.exists() and wal.stat().st_size):
+    if opencode_fingerprint(path, record["root"]) != before:
         raise HubError("OpenCode changed during content read")
     return {"messages": messages, "cursor": cursor, "partial": len(rows) >= limit, "malformed": malformed, "oversized": 0, "branch": "root session; text parts only"}
 
@@ -830,7 +870,7 @@ def preview(store, key):
             "malformed": malformed, "oversized": oversized}
 
 
-def running_provider(provider):
+def running_provider(provider, executable=None):
     """Privacy preserving: enumerate executable names, never other command lines."""
     if os.name != "nt":
         return None
@@ -845,6 +885,9 @@ def running_provider(provider):
     k.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Process)]
     k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Process)]
     k.CloseHandle.argtypes = [wintypes.HANDLE]
+    k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    k.OpenProcess.restype = wintypes.HANDLE
+    k.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
     handle = k.CreateToolhelp32Snapshot(2, 0)
     if handle == ctypes.c_void_p(-1).value:
         return None
@@ -857,16 +900,97 @@ def running_provider(provider):
         names = {"claude": {"claude.exe"}, "codex": {"codex.exe"},
                  "opencode": {"opencode.exe"}, "pi": {"node.exe", "pi.exe"},
                  "copilot": {"copilot.exe"}, "gemini": {"node.exe", "gemini.exe"}}[provider]
+        if executable:
+            names.add(Path(executable).name.casefold())
+        def advance():
+            ctypes.set_last_error(0)
+            result = k.Process32NextW(handle, ctypes.byref(entry))
+            if not result and ctypes.get_last_error() != 18:
+                raise OSError("Process enumeration unavailable")
+            return result
+        node_seen = False
         while ok:
             if entry.szExeFile.casefold() in names:
-                return True
-            ok = k.Process32NextW(handle, ctypes.byref(entry))
+                if entry.szExeFile.casefold() == "node.exe":
+                    node_seen = True
+                else:
+                    if executable:
+                        process = k.OpenProcess(0x1000, False, entry.th32ProcessID)
+                        if not process:
+                            return None
+                        try:
+                            size = wintypes.DWORD(32768)
+                            buffer = ctypes.create_unicode_buffer(size.value)
+                            if not k.QueryFullProcessImageNameW(process, 0, buffer, ctypes.byref(size)):
+                                return None
+                            # The Claude desktop app also calls itself Claude.exe.
+                            # Compare the selected verified CLI image, not its label.
+                            if not os.path.samefile(buffer.value, executable):
+                                ok = advance()
+                                continue
+                        except OSError:
+                            return None
+                        finally:
+                            k.CloseHandle(process)
+                    return True
+            ok = advance()
+        if not node_seen:
+            return False
+        # Ask WMI for PIDs only; unrelated Node command lines never enter Hub.
+        # The fixed WQL patterns recognize the audited installed CLI launchers.
+        patterns = {"pi": "(CommandLine LIKE '%pi-launcher.js%' OR CommandLine LIKE '%pi-coding-agent%')",
+                    "gemini": "(CommandLine LIKE '%gemini.js%' OR CommandLine LIKE '%gemini-cli%')"}
+        query = "Name='node.exe' AND (" + patterns[provider] + " OR CommandLine IS NULL OR CommandLine='')"
+        script = 'Get-CimInstance -ClassName Win32_Process -Filter "' + query + '" -ErrorAction Stop | ForEach-Object { if ([string]::IsNullOrEmpty($_.CommandLine)) { "unknown" } else { $_.ProcessId } } | Select-Object -First 1'
+        powershell = Path(os.environ.get("SystemRoot", "C:/Windows")) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        try:
+            answer = subprocess.run([str(local_path(str(powershell))), "-NoProfile", "-NonInteractive", "-Command", script],
+                                    stdin=subprocess.DEVNULL, capture_output=True, timeout=6, shell=False)
+            if answer.returncode != 0:
+                return None
+            result = answer.stdout.strip()
+            return bool(result) if not result or result.isdigit() else None
+        except (OSError, subprocess.TimeoutExpired, HubError):
+            return None
+    except OSError:
+        return None
+    finally:
+        k.CloseHandle(handle)
+
+
+def codex_writer_owned(profile, native):
+    """Read-only probe of Codex 0.164's own cooperative per-thread lock."""
+    directory = local_path(str(Path(profile["configHome"]) / "thread-writer-locks"))
+    if not directory.is_dir():
+        return running_provider("codex", profile["executable"])
+    path = local_path(str(directory / (native + ".lock")))
+    if not path.exists():
+        return False
+    if not path.is_file() or path.stat().st_nlink != 1:
+        return None
+    class Overlapped(ctypes.Structure):
+        _fields_ = [("Internal", ctypes.c_size_t), ("InternalHigh", ctypes.c_size_t),
+                    ("Offset", wintypes.DWORD), ("OffsetHigh", wintypes.DWORD), ("hEvent", wintypes.HANDLE)]
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    k.CreateFileW.restype = wintypes.HANDLE
+    k.LockFileEx.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(Overlapped)]
+    k.UnlockFileEx.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(Overlapped)]
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = k.CreateFileW(str(path), 0x80000000, 7, None, 3, 0x80, None)
+    if handle == ctypes.c_void_p(-1).value:
+        return None
+    try:
+        overlap = Overlapped()
+        if not k.LockFileEx(handle, 3, 0, 0xffffffff, 0xffffffff, ctypes.byref(overlap)):
+            return True if ctypes.get_last_error() in (32, 33) else None
+        k.UnlockFileEx(handle, 0, 0xffffffff, 0xffffffff, ctypes.byref(overlap))
         return False
     finally:
         k.CloseHandle(handle)
 
 
-def resume_spec(store, key, profile_id, active_probe=running_provider):
+def resume_spec(store, key, profile_id, active_probe=None):
     r = find_record(store, key)
     if profile_id not in r["targets"]:
         raise HubError("Choose an explicit source profile")
@@ -886,18 +1010,24 @@ def resume_spec(store, key, profile_id, active_probe=running_provider):
     if not (UUID.fullmatch(native) if r["provider"] != "opencode" else re.fullmatch(r"ses_[A-Za-z0-9]{8,80}", native)):
         raise HubError("Native session identity is invalid")
     path = source_file(r["sourcePath"], r["root"])
-    if file_stamp(path) != r["fingerprint"]:
+    current = opencode_fingerprint(path, r["root"]) if r["sourceKind"] == "database" else file_stamp(path)
+    if current != r["fingerprint"]:
         raise HubError("Source changed since refresh")
     cwd = local_path(r.get("cwd", ""), True)
     if str(cwd) not in p.get("trustedProjects", []):
         raise HubError("Trust this recorded project before launching; provider project hooks may execute")
-    active = active_probe(r["provider"])
+    if active_probe is not None:
+        active = active_probe(r["provider"])
+    elif r["provider"] == "codex" and r.get("sourceVersion") == "0.164.0":
+        active = codex_writer_owned(p, native)
+    else:
+        active = running_provider(r["provider"], p["executable"])
     if active is not False:
         raise HubError("A provider process may own this session; close it before resuming. Ownership is conservative")
     receipt = store.get("receipt:" + key, {})
     if receipt.get("state") in ("launching", "unverified") and time.time() - receipt.get("epoch", 0) < 60:
         raise HubError("This session was just requested; duplicate launch refused")
-    args = {"claude": ["--resume", native], "codex": ["resume", native],
+    args = {"claude": ["--resume", native], "codex": ["--no-daemon", "resume", native],
             "opencode": ["--session", native], "pi": ["--session", str(path)],
             "gemini": ["--session-file", str(path)]}[r["provider"]]
     prefix = [p["launchScript"]] if p.get("launchScript") else []

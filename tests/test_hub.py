@@ -102,6 +102,110 @@ class HubTests(unittest.TestCase):
                 hub.resume_spec(store, row["key"], profile["id"], lambda _: False)
         self.assertEqual(path.read_bytes(), original)
 
+    def test_wal_snapshot_committed_uncommitted_and_corrupt_frames(self):
+        path = self.base / "native.db"
+        writer = sqlite3.connect(path)
+        writer.execute("PRAGMA journal_mode=WAL")
+        writer.execute("PRAGMA wal_autocheckpoint=0")
+        writer.execute("CREATE TABLE sample(value TEXT)")
+        writer.execute("INSERT INTO sample VALUES ('committed')")
+        writer.commit()
+        wal = path.with_name(path.name + "-wal")
+        before = {p: p.read_bytes() for p in (path, wal, path.with_name(path.name + "-shm"))}
+        snapshot = hub._adapters.sqlite_snapshot
+        reader = snapshot.connect(before[path], before[wal])
+        self.assertEqual(reader.execute("SELECT * FROM sample").fetchall(), [("committed",)])
+        with self.assertRaises(sqlite3.Error):
+            reader.execute("DELETE FROM sample")
+        reader.close()
+        writer.execute("INSERT INTO sample VALUES ('not committed')")
+        reader = snapshot.connect(path.read_bytes(), wal.read_bytes())
+        self.assertEqual(reader.execute("SELECT * FROM sample").fetchall(), [("committed",)])
+        reader.close()
+        writer.rollback()
+        self.assertEqual(path.read_bytes(), before[path])
+        self.assertEqual(wal.read_bytes(), before[wal])
+        writer.close()
+        damaged = bytearray(before[wal]);damaged[56] ^= 1
+        with self.assertRaises(ValueError):
+            snapshot.project(before[path], damaged)
+        with self.assertRaises(ValueError):
+            snapshot.project(before[path], before[wal][:20])
+
+    def test_codex_exec_is_a_native_resumable_root_session(self):
+        profile, path = self.provider("codex")
+        records = fixture("codex", self.cwd)
+        records[0]["payload"]["source"] = "exec"
+        path.write_bytes(encode(records))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            self.assertFalse(row["subagent"])
+
+    def test_snapshot_refuses_open_writers_and_prevents_checkpoint_races(self):
+        root = self.base / "offline-source";root.mkdir()
+        path = root / "opencode.db"
+        writer = sqlite3.connect(path)
+        writer.execute("CREATE TABLE sample(value TEXT)");writer.commit()
+        try:
+            with self.assertRaises(hub.HubError):
+                hub.opencode_snapshot(path, str(root))
+        finally:
+            writer.close()
+        before = path.read_bytes()
+        with hub.offline_source(path):
+            with self.assertRaises(sqlite3.Error):
+                second = sqlite3.connect(path)
+                try:
+                    second.execute("INSERT INTO sample VALUES ('racing writer')");second.commit()
+                finally:
+                    second.close()
+        snapshot, _ = hub.opencode_snapshot(path, str(root))
+        self.assertEqual(snapshot.execute("SELECT count(*) FROM sample").fetchone()[0], 0)
+        snapshot.close()
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_codex_transport_instructions_are_not_conversation(self):
+        profile, path = self.provider("codex")
+        records = fixture("codex", self.cwd)
+        records.insert(1, {"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"# AGENTS.md instructions for C:/private\nInternal setup instructions"}]}})
+        records.insert(2, {"type":"event_msg","payload":{"type":"user_message","message":"Real user task"}})
+        path.write_bytes(encode(records))
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            self.assertEqual(row["title"], "Real user task")
+            self.assertNotIn("Internal setup", str(hub.preview(store, row["key"])))
+
+    def test_offline_persisted_wal_capture_excludes_writers(self):
+        # Capture a real committed WAL before SQLite checkpoints it on close,
+        # then restore those bytes as a quiescent, crash-recovery style store.
+        root = self.base / "persisted-wal";root.mkdir()
+        path = root / "opencode.db"
+        writer = sqlite3.connect(path)
+        try:
+            writer.execute("PRAGMA journal_mode=WAL")
+            writer.execute("PRAGMA wal_autocheckpoint=0")
+            writer.execute("CREATE TABLE sample(value TEXT)")
+            writer.execute("INSERT INTO sample VALUES ('persisted')");writer.commit()
+            wal = path.with_name(path.name + "-wal")
+            raw, frames = path.read_bytes(), wal.read_bytes()
+        finally:
+            writer.close()
+        path.write_bytes(raw);wal.write_bytes(frames)
+        with hub.offline_source(path), hub.offline_source(wal):
+            with self.assertRaises(sqlite3.Error):
+                second = sqlite3.connect(path)
+                try:
+                    second.execute("INSERT INTO sample VALUES ('racing')");second.commit()
+                finally:
+                    second.close()
+        snapshot, _ = hub.opencode_snapshot(path, str(root))
+        try:
+            self.assertEqual(snapshot.execute("SELECT * FROM sample").fetchall(), [("persisted",)])
+        finally:
+            snapshot.close()
+        self.assertEqual(path.read_bytes(), raw)
+        self.assertEqual(wal.read_bytes(), frames)
+
     def test_gemini_journal_replay_patches_rewind_and_project_mapping(self):
         profile, path = self.additional_provider("gemini")
         profile["projectPath"] = str(self.cwd)
@@ -415,7 +519,7 @@ class HubTests(unittest.TestCase):
                 profiles[0].update(versionVerified=True, trustedProjects=[str(self.cwd)], verifiedExecutableStamp=hub.file_stamp(Path(p["executable"])))
                 store.set("profiles", profiles)
                 command = hub.resume_spec(store, row["key"], p["id"], lambda _: False)
-                suffix = ["--resume", ID] if provider == "claude" else ["resume", ID] if provider == "codex" else ["--session", str(path)]
+                suffix = ["--resume", ID] if provider == "claude" else ["--no-daemon", "resume", ID] if provider == "codex" else ["--session", str(path)]
                 self.assertEqual(command["argv"], [p["executable"], *suffix])
                 self.assertEqual(command["cwd"], str(self.cwd))
                 for active in (True, None):
