@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Adapted from herdrdev/herdr-app defaults/mods/tabs/main.js, pinned
 // b22936225403f38f0e6f38dd2f2fe4b444a85988 / installed Herdr 0.1.15.
-// Changes: functional View hooks and one History panel toggle.
+// Changes: functional View hooks, defensive saved preferences, one History toggle.
 // Original shipped tabs remain untouched. See assets/HERDR-LICENSE.txt
 // and THIRD_PARTY_NOTICES.md for licensing/provenance.
 import { div, svg, image } from "gpui-kit";
@@ -20,7 +20,10 @@ function find(node, id) {
 export function initTabs() {
     this.pressed = null;
     this.scroll = ScrollHandle.new();
-    this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    try {
+      const saved=JSON.parse(localStorage.getItem("panels") ?? "{}");
+      this.panels=saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{};
+    } catch (_) { this.panels={}; }
 }
 
 // The side panel is remembered per space: switching shows that space's choice

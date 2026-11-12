@@ -20,7 +20,7 @@ test('literal transcript display, grouping, pagination and safe local launch', (
 });
 
 // The host mock checks behavior after deferred actions, not only initial render.
-async function panel(initialHook,props={}) {
+async function panel(initialHook,props={},savedPanels=null) {
   const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[], artwork=[];
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
@@ -77,7 +77,7 @@ async function panel(initialHook,props={}) {
     },
     run:(name,args)=>runs.push({name,args}),
   };
-  const context=vm.createContext({console,JSON,Map,Set,Date,Error,String,Object,Array,Math,Promise,localStorage:{getItem:()=>null,setItem(){}}});
+  const context=vm.createContext({console,JSON,Map,Set,Date,Error,String,Object,Array,Math,Promise,localStorage:{getItem:()=>savedPanels,setItem(){}}});
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
   const art = kind => path => {artwork.push({kind,path});return element();};
@@ -244,4 +244,12 @@ test('History uses one collapsible Files/Changes panel in a preserved personal l
   work.children[1].hidden=true;await header.click('panel-session-hub-history');
   assert.ok(header.runs.some(r=>r.name==='layout.select'&&r.args.child==='session-hub-history'));
   assert.ok(header.runs.some(r=>r.name==='layout.show'&&r.args.id==='panel'));
+});
+
+test('native header tolerates corrupt or non-object saved panel preferences',async()=>{
+  for(const saved of ['{','[]','null','true']) {
+    const header=await panel(undefined,{role:'tabs'},saved);
+    assert.equal(JSON.stringify(header.view.panels),'{}');header.draw();
+    assert.equal(header.requests.length,0);
+  }
 });
