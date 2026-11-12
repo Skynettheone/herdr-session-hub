@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="0.1.0">
   <img src="https://img.shields.io/badge/stable-Windows_x64-238636" alt="Stable scope: Windows x64">
 </p>
-<p align="center"><a href="#install">Install</a> · <a href="#history-and-usage">Features</a> · <a href="#compatibility">Compatibility</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
+<p align="center"><a href="#install">Install</a> · <a href="#history-and-usage">Features</a> · <a href="#compatibility">Compatibility</a> · <a href="docs/USER_GUIDE.md">User guide</a> · <a href="https://herdr.dev/gallery/?type=mods">Herdr gallery</a></p>
 
 ![Herdr Session Hub showing local coding-agent session history in the native Windows sidebar](preview.png)
 
@@ -21,6 +21,8 @@
 **Usage** share one collapsible tab beside
 **Files** and **Changes**, with Herdr's own colors, agent icons and theme behavior.
 The captures use synthetic histories; no personal conversations are shown.
+
+In the Herdr gallery, search for **Herdr Session Hub** by **Skynettheone**.
 
 ## Install
 
@@ -35,7 +37,7 @@ Follow its RECIPE.md and preserve my existing layouts, shortcuts and provider hi
 The agent must review the helper and installers, explain what they read/run, and
 use a verified bundle for your platform. **Copying only `mods/session-hub` is not
 sufficient**: the Python runtime and `runtime.json` must also be configured.
-[Agent installation guide](docs/INSTALL_WITH_AGENT.md) · [Recipe](RECIPE.md)
+[Agent installation guide](docs/INSTALL_WITH_AGENT.md) · [Read the recipe](RECIPE.md)
 
 **[Download Windows 0.1.0](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0)**,
 the first stable release for **Windows 11 x64**. The release includes the verified
