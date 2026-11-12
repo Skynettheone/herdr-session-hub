@@ -25,6 +25,11 @@ continuation and production readiness remain disabled. Intel macOS has no pinned
 crypto wheel. CI failures exposed YAML quoting and symlink-alias test expectations;
 these were fixed, not hidden with skipped OS jobs. See PORT_ACCEPTANCE.md.
 
+Final privacy review found command detection could resolve a PATH alias to a
+credential-named file and inspect its binary header. It now rejects those names
+before any open, matching the history-source boundary. A sentinel regression
+forbids the open itself. Final platform CI and CodeQL passed on `4b32d18`.
+
 ## Package and installer follow-up
 
 Release verification now rejects incomplete/empty/duplicate/unsafe manifests,

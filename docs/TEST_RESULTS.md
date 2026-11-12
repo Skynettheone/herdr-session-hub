@@ -2,17 +2,17 @@
 
 ## Current platform-port checkpoint
 
-On exact source `930928a69a33cb08c9a71847a3d34eabf11cd67d`, the essential
-[platform matrix](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071315)
-and [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071363)
-passed. Windows ran 105 Python tests: 93 passed, 12 POSIX-only checks skipped,
-plus 17 UI host groups and Ruff. Linux x64 ran 105: 102 passed, three Windows-only
-checks skipped. Apple Silicon macOS ran 105: 102 passed, three Windows-only checks
+On exact source `4b32d18e15d8d3858a37060ccb8fec4eaf35d0ae`, the essential
+[platform matrix](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43202496160)
+and [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43202496031)
+passed. Windows ran 106 Python tests: 94 passed, 12 POSIX-only checks skipped,
+plus 17 UI host groups and Ruff. Linux x64 ran 106: 103 passed, three Windows-only
+checks skipped. Apple Silicon macOS ran 106: 103 passed, three Windows-only checks
 skipped. Actual Linux Secret Service and macOS Keychain tests passed; Windows
 retains actual DPAPI coverage. The repository reported zero open code-scanning
 alerts afterward. Native GUI/context acceptance for the new ports remains pending.
 
-Local Ubuntu WSL with a private checksum-verified Python 3.14.10 environment ran
+The preceding local Ubuntu WSL stage with a private checksum-verified Python 3.14.10 environment ran
 105 tests in 15.989 seconds: 101 passed, three Windows-only plus the unavailable
 local desktop-key-store check skipped. This is helper coverage, not WSL history
 support or a Linux GUI pass. POSIX tests verify real cross-process writer locks,
@@ -20,6 +20,14 @@ WAL generation lifetime, private state, and install transactions. Installer unit
 tests mock pip/venv/SDK commands; no native desktop acceptance is inferred.
 The user's requirement includes those desktops, which are unavailable, so the
 production gate remains closed. PORT_ACCEPTANCE.md records the remaining work.
+
+The final Windows build ran 106 tests in 37.368 seconds (12 platform skips),
+17 host groups, Ruff, the isolated installed SDK check and offline wheel hashes.
+Its 10k list/search sample took 0.457 seconds. Renewed real Windows install smoke
+passed tamper refusal, failed-swap rollback/working old helper, receipt/lock
+refusal, separate runtimes, immutable package, uninstall/state retention/Hub purge
+and unchanged layout/key/original hashes. The final privacy regression proves
+executable detection refuses credential-named alias targets before opening them.
 
 ## Release-hardening follow-up
 

@@ -12,19 +12,28 @@ See PORT_ACCEPTANCE.md for the precise scope and follow-up procedure.
 Source stages are committed separately: `248b2a8` native state services,
 `8d65a29` POSIX filesystem/source guards, `4c904ab` packaging and OS CI,
 `720bdc8` YAML correction, `942a40c` WAL lifetime/Keychain read-back and
-`930928a` canonical executable test expectations. Final source
-`930928a69a33cb08c9a71847a3d34eabf11cd67d` passed
-[all three platform jobs](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071315)
-and [combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43201071363).
+`930928a` canonical executable test expectations and `4b32d18` credential-target
+refusal before executable inspection. Final source
+`4b32d18e15d8d3858a37060ccb8fec4eaf35d0ae` passed
+[all three platform jobs](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43202496160)
+and [combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43202496031).
 Zero open code-scanning alerts were reported afterward.
 
-Each platform ran 105 Python tests: Windows **93 passed / 12 platform skips**,
-Linux and Apple Silicon macOS each **102 passed / 3 Windows-only skips**.
+Each platform ran 106 Python tests: Windows **94 passed / 12 platform skips**,
+Linux and Apple Silicon macOS each **103 passed / 3 Windows-only skips**.
 Windows also passed Ruff and 17 UI host groups. Actual Keychain and Secret Service
 creation/read-back/encryption/decryption/unsigned-scope checks passed. Local
-isolated Linux ran 105 with four skips (its actual desktop key store is absent).
+isolated Linux's preceding stage ran 105 with four skips (its actual desktop key store is absent).
 Real source-lock tests cover active transactions, checkpoints and the last
 provider connection closing while a snapshot holds the SHM deadman switch.
+
+The final local Windows build repeated 106 tests in 37.368 seconds, 17 host groups,
+Ruff, isolated installed SDK validation, offline hashes and 123-file stage/fresh
+extraction verification. Its 10k sample took 0.457 seconds. The renewed actual
+offline Windows install smoke passed tamper/receipt/lock refusal, failed final
+swap recovery with a working old helper, distinct retained runtimes, unchanged
+source bundle, WhatIf/uninstall/state retention/Hub purge and unchanged sentinels.
+Final documentation refresh does not change any tested runtime/script/test byte.
 
 No provider credential, production configuration, original history or remote
 endpoint was a port test target. The first CI failures (YAML quoting and raw
@@ -38,6 +47,31 @@ with explicit development labels, matching offline wheels, manifests and fresh
 extraction checks. Final artifact/checksum receipts are appended externally to
 avoid a checksum cycle. No production install, tag, release or gallery publication
 was performed. Intel macOS and other architectures have no accepted bundle.
+
+### Final unpublished port artifact receipts
+
+Each artifact has **123 manifest files** and **66 runtime/script/test/artwork
+payload files** that match the tested source. Staging and final fresh extraction
+passed verification. Only public Markdown was refreshed after freezing runtime
+bytes; this receipt is intentionally appended outside the archives to avoid a
+checksum cycle. Each ZIP has a matching external `.zip.sha256` sidecar.
+
+| Target | Local ZIP | Bytes | SHA-256 |
+|---|---|---:|---|
+| Windows x64 | `herdr-session-hub-0.1.0-dev-windows-x64-20261112104205.zip` | 5,069,145 | `6f28bc62e2a63f72bada1fd8d9ae5b7e389eae41072f9eac39fb012eeee1b5a7` |
+| Linux x64 experimental | `herdr-session-hub-0.1.0-dev-linux-x64-20261112104735.zip` | 5,975,629 | `7402a9c6162842674ae39dcb03f2d35d47db254d94bdff66806ca62ef4233a8a` |
+| macOS arm64 experimental | `herdr-session-hub-0.1.0-dev-macos-arm64-20261112104735.zip` | 5,157,160 | `bc36997c5740208371a3f88540737e631bda4dbfda6680d72488c6429bcefc67` |
+
+The extracted Windows helper passed an isolated numeric-refresh invocation and
+the package still verified afterward. The Linux ZIP was then checksum-verified,
+extracted and invoked using an actual isolated Linux Python 3.14.10 interpreter
+with only its own hash-locked offline wheels. Packaged helper list/startup passed;
+its missing desktop key store correctly refused a write with a single safe error
+and no plaintext state. Extraction still verified after both operations. macOS
+package integrity/source equality is verified, with actual native dependencies
+and key-store behavior covered by hosted tests; no macOS GUI or native package
+installation acceptance is claimed. Zero open CodeQL alerts were reported after
+the final source scan. All three archives remain local and unpublished.
 
 ## Previous release-hardening candidate
 
