@@ -1,6 +1,55 @@
 # Release preparation report — 2026-11-12
 
-## Current Usage candidate
+## Current release-hardening candidate
+
+Package/installer fixes are committed separately at `556f0aa` and `c235dc9`;
+the tested source/docs snapshot is `fce7c5f79b413da8f43fd49cf38a54cf1f7f242c`.
+No native mod, provider launcher or accounting implementation changed after
+the previous native acceptance. See PRODUCTION_READINESS.md for the reconciled
+scope, external evidence limits and deliberately unavailable operations.
+
+The final build passed **82 Python tests in 19.777 seconds**, **17 UI host groups**,
+Ruff, installed Herdr 0.1.15 SDK validation and all offline wheel hashes. A 10k
+list/search sample took 0.177 seconds. Six new package regression groups include
+real Windows hard/directory links. The renewed disposable install smoke passed
+pre-write tamper refusal, injected final-swap rollback and a working old helper,
+pending-receipt refusal, held-lock refusal, separate-runtime upgrade, unchanged
+source bundle, uninstall WhatIf/state retention/Hub purge and unchanged original,
+layout and key sentinels. No production configuration was selected.
+
+Hosted [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43193978595)
+and [combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43193978460)
+both passed on that exact snapshot. Zero open code-scanning alerts were reported
+afterward. CI remains the same two essential jobs, with no publication workflow.
+
+The builder verified staging and a fresh extraction of **112 files**. The packaged
+helper also passed an isolated numeric-refresh invocation from extraction, after
+which package verification still passed. The independent Usage oracle again
+matched all four periods, and the synthetic source hashes/search-Off flags
+remained correct. All native/runtime/script/test payload bytes are compared with
+the tested source before a final documentation-only archive refresh. Final
+filename/hash receipts are appended outside the archive to avoid a checksum cycle.
+
+Version stays **0.1.0-dev / releaseReady=false**. This closes the identified local
+package/upgrade gaps; it does not fabricate a second company identity, working
+additional CLIs, other OS testing, independent human audit or publisher signature.
+No production installation or release/gallery publication was performed.
+
+### Final hardening artifact receipt
+
+`herdr-session-hub-0.1.0-dev-windows-x64-20261112094400.zip`, **5,035,761 bytes**.
+SHA-256: `62badf55daba3e7c213fb235a30748eae938826b783baf50f58df05a23af0bfd`.
+
+All **112 manifest files** passed staging and final fresh-extraction checks;
+all **58 runtime/script/test/artwork payload files** matched the tested source.
+The extracted packaged helper passed with isolated external state, and the
+extraction still verified afterward. Only CHANGELOG and this report's preceding
+validation section were refreshed after the full build. This final hash receipt
+is external to the archive to avoid a checksum cycle. The archive and its
+matching `.zip.sha256` sidecar remain local and unpublished. It supersedes all
+older artifacts below.
+
+## Previous Usage candidate
 
 The final runtime is `25e9dabd841fd119a4ea327c56a326fdf12b803a`;
 acceptance documentation/captures are committed at `903528f`. This supersedes
