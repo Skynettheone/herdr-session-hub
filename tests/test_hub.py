@@ -151,6 +151,22 @@ class HubTests(unittest.TestCase):
         self.assertEqual(backup.read_bytes(), b"previous encrypted state")
         self.assertEqual(state.read_bytes(), b"new encrypted state")
 
+    def test_profile_save_cannot_forge_trust_or_implicit_content_consent(self):
+        profile, _ = self.provider()
+        with hub.Store(self.state) as store:
+            row = self.scan(store, profile)
+            hub.rpc(store,{"action":"trust-project","key":row["key"],"profile":profile["id"],"confirmation":str(self.cwd)})
+            forged = {**store.get("profiles")[0],"trustedProjects":[str(self.base)],"versionVerified":True}
+            hub.rpc(store,{"action":"profile-save","profile":forged})
+            saved = store.get("profiles")[0]
+            self.assertEqual(saved["trustedProjects"],[str(self.cwd)])
+            self.assertFalse(saved["versionVerified"])
+            for name in ("content","enabled"):
+                for value in ("false",1,[],{}):
+                    with self.subTest(name=name,value=value),self.assertRaises(hub.HubError):
+                        hub.rpc(store,{"action":"profile-save","profile":{**saved,name:value}})
+            self.assertFalse(store.get("profiles")[0]["content"])
+
     def test_uninstaller_refuses_reparse_ancestor_above_selected_home(self):
         real = self.base / "real";mod = real / "app/mods/session-hub"
         mod.mkdir(parents=True)

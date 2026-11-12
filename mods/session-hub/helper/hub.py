@@ -407,6 +407,8 @@ def profile_validate(p):
     p["executable"] = str(exe) if exe else ""
     p["cliMissing"] = not exe or not exe.is_file()
     p["label"] = clean(p.get("label") or p["id"], 80)
+    if any(name in p and not isinstance(p[name], bool) for name in ("enabled", "content")):
+        raise HubError("Profile enabled/content flags must be explicit booleans")
     p["enabled"] = bool(p.get("enabled", True))
     p["content"] = bool(p.get("content", False))
     p["env"] = {**env}
@@ -1101,10 +1103,13 @@ def rpc(store, req):
         profiles = store.get("profiles", [])
         old = next((x for x in profiles if x["id"] == p["id"]), None)
         # Configuration edits invalidate verification and project trust.
-        if not old or any(old.get(x) != p.get(x) for x in ("executable", "launchScript", "configHome", "roots", "env", "projectPath")):
+        if not old or any(old.get(x) != p.get(x) for x in ("provider", "executable", "launchScript", "configHome", "roots", "env", "projectPath")):
             p["versionVerified"] = False
             p["trustedProjects"] = []
         else:
+            # Trust is recorded only by the exact-project confirmation action.
+            # A pasted profile must not add trusted projects behind that control.
+            p["trustedProjects"] = list(old.get("trustedProjects", []))
             # Verification is an observed result, not a writable form flag.
             for name in ("versionVerified", "verifiedExecutableStamp", "verifiedScriptStamp", "cliVersion"):
                 if name in old:
@@ -1133,7 +1138,8 @@ def rpc(store, req):
         p = profile_validate(p)
         if p["cliMissing"]:
             raise HubError("Native provider CLI is missing; discovery remains available")
-        # Version only: no config/plugin discovery, no provider transcript access.
+        # Explicit version command, run outside the source project. A native CLI
+        # may still load its own startup configuration; Hub does not read it.
         prefix = [p["launchScript"]] if p.get("launchScript") else []
         result = subprocess.run([p["executable"], *prefix, "--version"], stdin=subprocess.DEVNULL,
                                 capture_output=True, timeout=8, shell=False, cwd=str(store.root), env=profile_environment(p["env"]))
