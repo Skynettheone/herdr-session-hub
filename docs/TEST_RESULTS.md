@@ -1,153 +1,61 @@
-# Test evidence — 2026-11-12
+# Test results — 2026-11-12
 
-Latest local result: **42 helper tests, 9 panel groups, Ruff, installed native SDK
-check and offline install/upgrade/uninstall smoke passed**. The final build repeated
-the suites (42 helper tests in 15.286 seconds). The follow-up section below supersedes
-the historical counts and interrupted-GUI observations.
+This is a Windows development candidate. The following evidence supersedes
+previous pending-continuation/updater notes. Production configuration was not an
+installation target; no real user transcript was used or deleted.
 
-## Environment
+- Python regression suite: 46 tests passed in 25.339 seconds; the subsequently
+  added persisted-WAL writer-exclusion regression also passed (47 total tests).
+  The final bundle build repeats the full suite.
+- Native-host panel suite: 10 groups passed, including async search/refresh races,
+  error paths, separate panes, focused shortcuts, catalog artwork and safe sidebar
+  layout creation/reveal.
+- Ruff 0.17.4 correctness checks (`F`, `E9`): passed.
+- Native GUI: real search, filters, preview, settings, multiple panes, 420px narrow
+  navigation and dark/light/custom-community themes passed the recorded smoke
+  checks. Exhaustive controls in every theme remain unverified.
+- Four primary native CLIs: actual Hub-button continuation restored original
+  native IDs/cwd/selected profiles and prior context, followed by a new
+  `CONTINUITY_OK` response. Active ownership was detected for all four.
+- Real Herdr updater: 0.1.14→0.1.15, backup rollback to 0.1.14 and re-update passed.
+  39 mod/config/layout hashes survived update; 42 including encrypted Hub state
+  survived rollback. Unknown-SDK continuation was disabled while browsing worked.
+  Native status reported `errors: []` on restored and re-updated versions.
 
-Windows 11 (PowerShell reports Windows NT 10.0.26300.0), Herdr 0.1.15,
-isolated herdr-core 0.1.20, CPython 3.14.3, SQLite 3.50.4, Node 24.14.1.
-Provider version/help probes: Claude Code 2.1.322, Codex CLI 0.164.0,
-OpenCode 1.3.17, Pi 1.1.0. No credentials or actual history text were inspected.
+See [NATIVE_ACCEPTANCE.md](NATIVE_ACCEPTANCE.md) for versions, isolation, method,
+archive checksums, native screenshots and limitations. The model backend was a
+loopback fixture; cloud-account personal/company isolation was not tested.
+Gemini continuation remains unverified; Copilot has no usable installed CLI.
 
-## Executed tests
+Regression coverage includes 10k records, Unicode/long paths, sparse >1 GiB files,
+malformed/partial JSONL, compressed/concatenated/corrupt Codex rollouts, duplicate
+identities, shared-profile FTS privacy, cross-chunk AND, explicit trust, executable
+version drift, source hashes, WAL checksums/commits/locking, atomic state recovery,
+interrupted schema updates, metadata encryption/tampering/conflicts and disabled
+dangerous operations. A 10k-record list/search page took 0.183 seconds in the local
+46-test run; this is a sample, not a performance guarantee.
 
-`python -m unittest discover -s tests -v`: **33 tests passed**, 8.224 seconds
-in the final development-bundle run, including a >260-character Unicode source
-path. Restricted-sandbox hard-link creation
-was denied; rerun outside that sandbox with ordinary-user permissions passed.
-This is not an administrator requirement.
+## Hosted CI
 
-Coverage includes four synthetic adapters, exact resume argv/cwd/profile, missing
-CLI, unknown versions, changed executable, cwd trust, active/unknown refusal,
-source-hash invariance, malformed and partial JSONL, skipped huge lines,
-incremental append/search, credentials excluded, distinct/shared identities,
-same-store native collisions, FTS opt-in/clear, live OpenCode WAL refusal,
-actual DPAPI encryption, concurrent writers, corruption refusal, transactional
-schema upgrade, interrupted replacement, locked recovery, real authenticated
-portable encryption, wrong keys/tampering/truncation, foreign metadata and conflicts.
+On pushed commit `57e2c4c918a2544db5bdfa37b1ed68d9d3fb9d02`:
 
-50 MiB, 100 MiB and **1 GiB + 1 byte** synthetic sparse histories stayed visible
-with bounded previews. Traced helper allocations stayed under the asserted
-25 MiB bound in those tests. These are sparse-file parser tests, not a claim of
-full >1 GiB indexing throughput. Actual zstd concatenated frames, corruption,
-truncation and decompression-ratio safeguards were exercised.
+- [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43134090322): success.
+- [Combined CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43134094615): success.
 
-10,000 synthetic normalized session records: sorting/filtering/pagination took
-**0.111 seconds** in that run (threshold 5 seconds). A separate 270-file test
-verified 128/128/14 refresh batches, eventual complete enumeration and stale
-missing-source retention. This does not establish 10k-file cold-scan latency.
+Two earlier queued runs had zero jobs and no downloadable logs. Fresh manual
+dispatches completed successfully. These results cover that exact commit;
+final-change CI results are recorded below after the source push. CodeQL job
+completion is not a claim of no alerts or an independent security audit.
 
-`node --experimental-vm-modules --test tests/panel.test.mjs`: **5 test groups
-passed**. These cover deferred search/filter/profile/grouping/pagination behavior,
-detail previews, aliases/archive/removal, copy, trust, exact `tab.new` requests,
-guided settings, picker/profile JSON failures, index controls, offline export/import
-terminal arguments, error recovery and independent pane state. Native host calls
-are mocked; this is not full native interactive acceptance.
+CI remains one relevant-change Windows fixture/lint/panel job and one main-branch
+combined CodeQL job, with cancellation of stale runs. No deployment or publication
+job exists. Installed-SDK/GUI, packaging and install smoke are local release checks.
 
-The native UX was subsequently refined: native accessible buttons, compact rows,
-automatic bounded previews, a master/detail layout above 760 logical pixels,
-sidebar navigation below that width, and separate settings sections. Theme tests
-verify that dark, light and partial community palettes resolve only through Herdr
-semantic tokens, with no fixed palette overrides. An actual initial native render
-of the redesigned layout passed. The user stopped Computer Use with Escape before
-the remaining redesigned interaction and community-theme visual checks; those
-checks were not resumed or claimed complete.
+## Remaining release gates
 
-`herdr-app check mods/session-hub`: **passed** on the installed 0.1.15 SDK after
-implementation changes. An earlier restricted check warned about unavailable
-gpui-shell storage; checks exited successfully. Passing check is only one render.
-
-## Actual GUI observations
-
-An isolated app home under `.dev/herdr-app`, dedicated
-`HC_SESSION=test-session-hub` and scratch XDG paths were used. The real installed
-Herdr GUI rendered all four synthetic records with no reported mod errors. Windows
-computer-use observations verified provider filtering (Codex leaves one record),
-opening detail, scrolling, and loading/rendering the synthetic user/assistant
-preview. The helper ran asynchronously via Herdr's real `exec` API.
-
-`preview.png` is an unmodified real capture of the redesigned native layout's
-initial loading state. GUI automation was stopped before the revised gallery
-capture and visual theme matrix were complete. It contains no private histories
-and is not a fabricated mockup; a final populated gallery screenshot remains a
-release gate.
-
-## Not established
-
-- Same-native-session continuity and last context after real resume for any of
-  the four providers. Only command help, vectors, cwd and safety guards are tested.
-- Runtime personal/company authentication isolation, Windows quoting across every
-  provider launcher, all controls in real native UI, native multi-pane interactions,
-  light-theme and narrow-width acceptance.
-- Actual Herdr updater persistence, full rollback through a real app upgrade,
-  macOS/Linux, WSL/UNC, signed helper distribution or independent security audit.
-
-## Hosted validation after the authorized push
-
-On commit `b320575`, [Windows tests](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43084706399)
-completed successfully. [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43084706351)
-completed successfully for Python and JavaScript/TypeScript. This records job
-completion, not an assertion that no security alerts exist or an independent audit.
-The first Windows workflow was rejected before tests because a YAML plain scalar
-contained the pip `--only-binary=:all:` flag; a focused CI commit changed it to a
-block scalar, and the corrected workflow passed.
-
-Local package/install/uninstall verification is recorded in RELEASE_REPORT.md.
-No production installation or original deletion was performed. The folder was not
-a Git checkout at the start; the user later explicitly requested initialization,
-logical commits and a push to their origin. Release publication remains separate.
-
-## Quality/catalog follow-up (supersedes counts and interrupted-GUI notes above)
-
-- Full Python suite: **42 passed**, 20.657 seconds with ordinary desktop filesystem
-  permissions. Ten-thousand-record list/search page: 0.443 seconds while native
-  GUI checks were running; timing is a sample, not a benchmark guarantee.
-- Panel host suite: **9 test groups passed**, including delayed startup, normal
-  list and final-refresh query replacement; focused input shortcut protection;
-  native catalog/custom entries and icon tint versus full-color behavior.
-- Ruff 0.17.4 correctness checks (`F`, `E9`): passed. Tool is development-only,
-  pinned/hash-locked separately from runtime dependencies.
-- Installed native Herdr 0.1.15 check: passed after new catalog/icons and height
-  changes. The final release builder repeats it against packaged source.
-- Offline install/upgrade/uninstall smoke: passed with new assets/adapters. The
-  installed helper imports correctly under `-I`; artwork license is present;
-  layout/key/original sentinels keep their hashes.
-
-New fixtures cover Copilot root event extraction and disabled launch; subagent
-`agentId` and `parentToolCallId` exclusion from text/cwd; Gemini legacy JSON and
-JSONL patch/order/removal/replacement/rewind; cumulative 10k message budget;
-unknown cwd despite workspace directories; exact project hash mapping; oversized
-and malformed metadata-only fallback; no obsolete text after journal updates.
-Other regressions prove per-profile FTS opt-out with shared physical sources, AND
-terms across chunks, record-budget partial coverage, atomic recovery failure and
-keep-local with no previous annotation.
-
-The visible isolated app `.dev/herdr-visual` uses the same disposable core and
-synthetic histories. Native interaction verified provider filtering (four → one),
-search typing/debounce (offline → one), detail/async preview, Profiles/Agents
-settings, dark/paper/custom-community-format colors and correct provider artwork.
-Two concurrent views verified a 420px narrow pane with Back navigation, preview,
-and a separate wide pane: filtering the narrow pane left the other pane at four
-records. Native status reported `errors: []`. A first hidden launch did not expose
-a Windows automation target; the visible isolated launch resolved that.
-
-Native testing found two rendering defects that host mocks could not establish:
-missing full-height detail flex container and numeric line-height interpreted as
-a multiplier. Both were corrected and observed again with the loaded transcript.
-`preview.png` is now a populated, unmodified dark-theme frame. Light and custom
-community-format captures are under `docs/screenshots/`. No real histories or
-credential files were used. These checks do not prove every action in every theme
-or any actual native provider-context continuation.
-
-## Hosted follow-up checks
-
-Source commit `47a3a4b9a5471cb77f250e0179a2114661771869` was pushed to the
-user-requested origin. The streamlined [Windows workflow](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43096802794)
-and [combined CodeQL workflow](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43096802816)
-were accepted but remained **queued with zero assigned jobs** after repeated
-monitoring. No new hosted pass or failure is claimed. Earlier hosted successes
-above do not establish this commit's hosted result. The equivalent local fixture,
-lint and panel checks passed; native GUI/SDK/install checks were local as described.
+Cloud-account isolation, Gemini continuation, exhaustive real-GUI controls,
+mixed-build active ownership, future Herdr versions and independent security
+review remain open. Original deletion, native transcript migration and remote
+sync are deliberately unavailable. macOS/Linux, UNC and WSL are unsupported.
+`releaseReady=false`; source tests and a checked development bundle do not imply
+a production release or authorize installation/publication.

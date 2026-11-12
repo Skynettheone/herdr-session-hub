@@ -13,8 +13,8 @@
 - Added Windows synthetic regression tests, native GUI smoke evidence,
   offline installation, uninstall and development packaging with checksums.
 - Kept original deletion, native migration and remote sync unavailable.
-- Production release remains blocked on native context-continuation checks,
-  precise active ownership, update validation and independent review.
+- Production release remains blocked on cloud-account isolation, exhaustive
+  native controls, broader active-ownership coverage and independent review.
 
 ### Quality and catalog follow-up
 
@@ -28,3 +28,17 @@
 - Fixed native conversation height/typography and gated Continue prerequisites.
 - Added pinned correctness lint and reduced CI to relevant Windows checks and
   one main-branch CodeQL job, with stale-run cancellation.
+
+### Native acceptance and sidebar
+
+- Added explicit native sidebar docking through a personal layout copy.
+- Verified actual Herdr 0.1.14→0.1.15 update, rollback and re-update in an
+  isolated installation, preserving mod/config/layout/encrypted-state hashes.
+- Verified four primary CLIs restore context through the actual Hub button
+  using disposable native sessions and a loopback model fixture.
+- Fixed Codex Herdr launch with `--no-daemon`, native exec-root discovery,
+  injected context filtering and the cooperative per-thread writer-lock probe.
+- Added bounded committed SQLite WAL projection with simultaneous Windows
+  deny-write source handles; OpenCode never opens originals through SQLite.
+- Distinguished the selected Claude CLI image from Claude Desktop and made
+  process-enumeration failures block continuation rather than imply idle state.

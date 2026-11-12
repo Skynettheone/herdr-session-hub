@@ -86,3 +86,20 @@ missing native ID, stale source and uncertain active ownership disable launch.
 - Official sheep artwork from `herdrdev/herdr` commit
   `ee5bfb5041bb3e4a49d591c72308aae3c81ecdde`, `assets/logo.svg`, reused
   unmodified with Apache-2.0 license retained. See THIRD_PARTY_NOTICES.md.
+
+## Native updater and SQLite snapshot follow-up
+
+The same pinned Herdr GUI commit's `src/update.rs` was read for staging,
+archive checksum checks, binary validation, restart/swap and `.old` cleanup;
+`src/commands.rs`, `src/mods.rs`, `src/persist.rs` and `src/window.rs` were read
+for native overlay/layout integration. No updater or layout source was copied.
+Official archive manifests and actual acceptance are in NATIVE_ACCEPTANCE.md.
+
+SQLite's [WAL format](https://sqlite.org/fileformat2.html#walformat) and
+[concurrency contract](https://sqlite.org/wal.html#concurrency) govern the
+independently written page projection. Windows delayed last-write timestamps
+([file times](https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times))
+cannot prove a coherent unlocked copy. Hub instead holds read handles that deny
+write/delete for both files, then validates checksums/commit boundaries and queries
+only a private image. Process enumeration follows the documented
+[Process32NextW exhaustion/error contract](https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32nextw).

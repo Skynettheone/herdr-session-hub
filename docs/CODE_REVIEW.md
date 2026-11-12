@@ -47,3 +47,13 @@ on this axis was FTS privacy (P1), now fixed.
 Summary: Standards 0 unresolved actionable findings; Spec 0 unresolved reported
 implementation defects with the above acceptance gaps. No production-ready or
 independent-security-audit claim follows from this review.
+# Native acceptance follow-up — 2026-11-12
+
+Focused read-only Standards and Spec reviews of the current fixes reported no
+remaining actionable defect. Corrected findings: inconsistent unlocked DB/WAL
+capture (P1), failed process enumeration mistaken for idle, renamed CLI detection,
+missing Node command-line visibility and revealing panels under hidden stacks.
+The suggested persisted-WAL writer-exclusion fixture was added and passed.
+Four primary native continuations and real update/rollback now passed; cloud
+account isolation, mixed-build ownership and exhaustive native controls remain
+open. This is source review, not an independent audit. Historical review follows.

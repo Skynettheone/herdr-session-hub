@@ -1,8 +1,9 @@
 # Using Session Hub
 
-This build is a development candidate. It has passed synthetic Windows and
-native-render checks; actual context continuation remains
-unverified. Do not use it as the only copy of important metadata.
+This build is a development candidate. Four primary CLIs passed native Herdr
+continuation with disposable histories and a loopback model fixture. Herdr
+update/rollback passed in an isolated installation. Cloud-account isolation and
+independent security review remain unverified. Keep a separate metadata backup.
 
 ## Setup and opening
 
@@ -17,6 +18,11 @@ herdr-app do mod.open --name session-hub
 
 The installer uses `place=none`: it does not dock automatically or edit layouts,
 keys, agent definitions or settings. Opening the panel is an explicit Herdr action.
+Click the **Dock** icon in History's header to add a 380px native sidebar. This
+creates and selects a new `session-hub-workspace` personal layout copy containing
+your complete existing layout. It never overwrites that layout; select the
+original layout in Herdr to return. Repeated docking reveals an existing Hub
+pane, including panes inside hidden stacks. Default dialog width is 440px.
 To try it without production installation, see CONTRIBUTING.md. Do not copy only
 the mod directory: `runtime.json` must point at the configured Python helper.
 
@@ -176,6 +182,15 @@ it validates the backup and keeps damaged evidence under a new `.hub` name. Do n
 recover while another helper is active. To roll back code, restore the prior mod
 folder and matching runtime; restore matching state from your approved backup if
 the previous version cannot read the current schema.
+
+Actual Herdr 0.1.14→0.1.15 update and backup rollback were tested only in a
+disposable installation (NATIVE_ACCEPTANCE.md). Back up the complete app binaries
+and personal app home before an application upgrade. To roll back, fully exit the
+app, restore the matching binary backup and retain the personal home; restore its
+state backup only if an older schema requires it. Windows can briefly hold the
+executable after window close; wait for that specific app to exit before replacing
+its folder. Herdr 0.1.14 still browses Hub but continuation is deliberately disabled.
+There is no claimed automatic app downgrade command.
 
 ```powershell
 pwsh -NoProfile -File scripts/uninstall.ps1 -AppHome "$HOME/.config/herdr-app" -WhatIf

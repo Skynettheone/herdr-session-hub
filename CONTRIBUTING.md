@@ -56,3 +56,10 @@ Documentation-only pushes do not run it. CodeQL runs both languages in one job
 on relevant main pushes or manually, avoiding duplicate PR/main security scans.
 Stale runs are cancelled. Native SDK/GUI, install smoke and packaging are local
 release checks; no automatic deployment/publication workflow exists.
+
+Manual real-provider/updater acceptance is documented in
+`docs/NATIVE_ACCEPTANCE.md`. Its loopback fixture, observer and updater harnesses
+live under `tests/native_lab_*.py` / `tests/herdr_update_lab.py` and never run in CI.
+Use disposable homes, explicit profiles and a separate core; never copy real
+credentials. Keep the harness's serving routes allowlisted. Native requests may
+contain synthetic history, so the fixture logs only booleans and counts.

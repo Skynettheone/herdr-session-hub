@@ -3,6 +3,30 @@
 Scope: local source review and synthetic adversarial tests. This is the
 implementer's review, **not an independent audit or a certification**.
 
+## Native acceptance review follow-up
+
+Both focused Standards and Spec reviewers found no remaining actionable defect
+in the final fixes. A P1 snapshot race was corrected: DB/WAL reads now hold
+simultaneous Windows deny-write/delete handles, including actual bounded reads.
+Real SQLite fixtures prove existing writers are refused, new writers are blocked,
+persisted WAL commits survive projection and source bytes stay unchanged.
+Unexpected Toolhelp enumeration termination now means unknown ownership; only
+ERROR_NO_MORE_FILES establishes exhaustion. Renamed CLI basenames participate
+in image identity checks, while Claude Desktop does not masquerade as the CLI.
+Missing Node command-line visibility also means unknown, blocking continuation.
+
+Codex 0.164's cooperative writer lock was observed held by the real resumed CLI.
+All four primary native tests detected live ownership. This does not establish
+mixed-build ownership or account isolation; selected-image/Node guards remain
+conservative. No credential registry is read by Hub. Native context and updater
+results are in NATIVE_ACCEPTANCE.md and supersede earlier unverified notes below.
+The manual loopback harness serves only allowlisted release/model routes and
+logs booleans/counts, never request bodies. It is not part of mod runtime or CI.
+
+Docking uses compare-and-create for a new personal layout and preserves the
+existing tree/files. Actual update/rollback retained 42 checked files. No production
+installation, original deletion, credential transfer or release publication occurred.
+
 ## Findings corrected during implementation
 
 - Windows GUI-subsystem native checks are now awaited through ProcessStartInfo

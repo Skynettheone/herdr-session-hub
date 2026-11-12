@@ -4,8 +4,11 @@ A native Herdr Desktop history panel for Claude Code, Codex, OpenCode, Pi, Gemin
 and Copilot, with a live capability catalog for every Herdr agent.
 
 **Development candidate — not production-ready.** The implementation and local
-test suite are present. Native GUI rendering/filtering/preview were exercised on
-Windows; actual restored provider context has not been verified. Production installation and publication have not been performed.
+test suite are present. Native Herdr continuation passed for Claude, Codex,
+OpenCode and Pi using disposable sessions and a loopback model fixture. Real
+Herdr update/rollback also passed. Cloud-account isolation, exhaustive native
+controls and independent security review remain open. Production installation
+and publication have not been performed.
 
 Session Hub discovers explicit local roots, searches metadata and opted-in text,
 groups projects, previews plain conversation text, and stores aliases/archive
@@ -16,14 +19,14 @@ light and a custom community-format theme were checked in the native GUI.
 Portable encrypted metadata bundles have dry-run import and conflict handling.
 Native resume requests use explicit profile directories, original cwd and argv
 arrays. OpenCode reads its installed-version SQLite schema without starting the
-CLI and refuses nonempty WAL data. Oversized and compressed histories have
+CLI, projects committed WAL frames in memory and refuses open writers. Oversized and compressed histories have
 bounded reads and visible partial coverage.
 
 | Capability | Status |
 |---|---|
 | F01–F04 discovery, history, metadata search, filters | Implemented; six history adapters fixture-tested |
-| F05 native continuation | Guarded launch implemented; actual continuity unverified; active checks conservative |
-| F06–F11 refresh, layout preservation, roots, preview, grouping, profiles | Implemented; native smoke and synthetic tests; update persistence not runtime-tested |
+| F05 native continuation | Four primary CLIs passed native GUI context checks with local model fixture; active checks remain conservative |
+| F06–F11 refresh, layout preservation, roots, preview, grouping, profiles | Implemented; isolated 0.1.14→0.1.15 update, rollback and re-update passed |
 | F12 full-text search | Opt-in encrypted local FTS5; bounded incremental coverage |
 | F13–F14 archive and aliases | Hub-only, reversible |
 | F15 removal / original delete | Hub removal implemented; original deletion unavailable |
@@ -38,12 +41,14 @@ SQLite 3.50.4, Node 24.14.1 (tests only). CLI help/version probes: Claude 2.1.32
 Codex 0.164.0, OpenCode 1.3.17, Pi 1.1.0, Gemini 0.49.0. Copilot is a missing-CLI shim; its native continuation
 is disabled. Cursor, Amp and other Herdr/custom agents are recognized with honest
 unavailable-history status when no verified offline adapter exists. This does not
-imply native resume acceptance. macOS/Linux, UNC and WSL are unsupported in this build.
+imply continuation acceptance for those additional providers. macOS/Linux, UNC and WSL are unsupported in this build.
 
 For a synthetic isolated demo or a local development bundle, follow
 [CONTRIBUTING.md](CONTRIBUTING.md). Install/uninstall/upgrade/rollback instructions
 are in the [user guide](docs/USER_GUIDE.md). The installer requires an explicit
 production-install switch and uses `place=none`; it does not replace layouts.
+Open History, then click its **Dock** header button to create a native 380px
+sidebar in a new personal layout copy. Your existing layout stays available.
 
 This is a trusted mod. There is no runtime telemetry or network client. A native
 provider may use its own hooks and network after a user requests resume. Read

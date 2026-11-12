@@ -1,5 +1,17 @@
 # Research findings — 2026-11-11
 
+## Native acceptance follow-up — 2026-11-12
+
+Installed Codex help and `hc --skill` establish `--no-daemon` for Herdr-hosted
+interactive launches. Herdr's pinned `src/update.rs` supports a local
+`HERDR_RELEASES_URL` test mirror; official versioned manifests are published at
+`app/<version>/manifest.json`. Official 0.1.14 and 0.1.15 archives were verified
+against those manifests and run only from repository-local installation copies.
+Production installation/configuration and real provider histories remain excluded.
+Native continuity tests use deterministic loopback endpoints and disposable homes;
+the model backend is a test fixture, while the provider CLI and stored sessions
+are real. Completed results are recorded in NATIVE_ACCEPTANCE.md.
+
 Confirmed before implementation on Windows: Herdr **0.1.15**, Claude Code
 **2.1.322**, Codex CLI **0.164.0**, OpenCode **1.3.17**, Pi **1.1.0**,
 Python **3.14.3**, SQLite **3.50.4**, Node **24.14.1**. No Rust toolchain on PATH.
@@ -8,7 +20,7 @@ The installed Herdr AGENTS.md and both declaration files were inspected.
 `exec` accepts an argument vector and timeout but no environment overrides;
 `readTextFile` is capped at 1 MiB. View lifecycle, retained InputState,
 focus, clipboard, and native flex builders are available. No production files
-have been changed. The directory is not a Git checkout.
+have been changed. Git was subsequently initialized and pushed at the user's request.
 
 ## Decisions
 
@@ -20,7 +32,7 @@ bundles; no custom encryption primitives. Secrets never go in subprocess argumen
 Provider configuration is explicit; approved roots and config homes are distinct.
 Profile-specific environment selection happens only in the helper launcher.
 
-Claude uses `--resume UUID`; Codex uses `resume UUID`; Pi uses `--session PATH`.
+Claude uses `--resume UUID`; Codex uses `--no-daemon resume UUID`; Pi uses `--session PATH`.
 Installed OpenCode uses `session list --format json`, **`export ID`**, and
 `--session ID`. It does **not** expose `session export` or `mini` in installed
 help. OpenCode CLI startup can initialize stores/load configuration: automatic
@@ -41,13 +53,14 @@ Conversation timestamps and source mtime must remain distinct.
 ## Blockers / verification boundaries
 
 No original history or credentials are needed for tests; synthetic roots only.
-Native resume flags are help-verified; actual restored provider context is not yet
-verified. Active-session detection is conservative; uncertain ownership must block
+Native resume restored context for the four primary CLIs in the isolated GUI
+with a loopback model fixture. Active-session detection is conservative; uncertain ownership must block
 resume. No audited original deletion or native transcript restore protocol exists
 for the four adapters. Both operations remain unavailable. Remote automatic sync
 is disabled; explicit encrypted metadata file exchange is the feasible first step.
 An isolated Herdr home AND isolated core must be used for GUI testing. A production
-installation, app upgrade and gallery publication require separate approval.
+installation and gallery publication require separate approval. The user authorized
+isolated app update/rollback tests; those passed without production installation.
 
 Pinned sources and licensing observations are in UPSTREAM_REVIEW.md. Test results
 and release gates will be recorded separately; these findings are not test passes.

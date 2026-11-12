@@ -1,69 +1,44 @@
-# Release preparation — 2026-11-12
+# Release preparation report — 2026-11-12
 
-Classification: **0.1.0-dev, Windows x64 development candidate**.
-`releaseReady=false`; this is not an approved production/gallery release.
+Version is **0.1.0-dev**, Windows x64 / Python 3.14 / Herdr 0.1.15.
+`releaseReady=false` remains intentional. Four primary native continuations and
+real Herdr update/rollback have passed; remaining gates are cloud-account
+isolation, Gemini continuation, broader ownership/control coverage and independent
+security review. Original deletion, native migration and remote sync are unavailable.
 
-## Local validation
+The source is on `main` at the user-requested origin, with conventional task
+commits using the existing Git identity and no assistant-authorship trailers.
+Pushing source was authorized. No production install, GitHub Release, gallery
+publication or original-history deletion was performed.
 
-- Python helper and native panel behavior tests pass; see TEST_RESULTS.md.
-- Native `check` is awaited with its actual Windows process exit code.
-- Offline installer smoke passed after correcting GUI-subsystem process waiting:
-  first install, second-install backup, uninstall dry-run, normal uninstall with
-  state retained, explicit Hub purge, and unchanged hashes for layout/key/provider
-  sentinels. All targets were disposable directories under this repository.
-- Provider originals and production Herdr configuration were not installation
-  targets. No GitHub Release or gallery listing was created.
-- The renewed visible GUI pass verified search/filter/preview/settings, multiple
-  panes, narrow navigation and dark/light/custom-theme rendering. Exhaustive native
-  controls and actual continuation remain open in FEATURE_STATUS.md.
+## Validation
 
-## Bundle contents and verification
+- Four real provider CLIs resumed their disposable native session through the
+  actual Hub button, retained original cwd/profile/ID and answered a new prompt
+  using earlier context. The model backend was a deterministic loopback fixture.
+- Real 0.1.14→0.1.15 update preserved 39 mod/config/layout hashes; verified backup
+  rollback preserved 42 including encrypted Hub state, with safe version fallback.
+  Re-update to 0.1.15 passed. See NATIVE_ACCEPTANCE.md.
+- Fixture/panel/correctness checks, native SDK check, install/backup/uninstall
+  smoke and offline wheel verification are required by the local release process.
+- Hosted Windows and combined CodeQL on `57e2c4c` succeeded. Final-code run links
+  are in TEST_RESULTS.md after the next source push.
 
-`scripts/build-release.ps1 -AllowUnverified` produces an explicitly named local
-development ZIP and SHA-256 sidecar under `dist/`. It includes mod/helper source,
-native SVG assets and artwork license, tests, scripts, documentation, genuine populated
-preview and the three locked offline dependency wheels. Each payload file has a
-SHA-256 entry in `SHA256SUMS.txt`. Source state, user paths/runtime.json, research
-repositories, environments, SDK-generated declarations and provider histories
-are excluded. No `layouts/` directory is submitted as a mod.
+## Local bundle
 
-The completed local bundle is
-`herdr-session-hub-0.1.0-dev-windows-x64-20261111190747.zip` (UTC build suffix),
-4,220,075 bytes. Both the staged payload and a fresh ZIP extraction passed the
-manifest verifier: **67 files**, no development state/auth/runtime config.
-SHA-256: `6e49ebf0faf1299f64f0ff29540f93ebb2a4aa020d4df97a3645b09ca0000dee`.
-The sidecar and this final verification entry are external to the ZIP to avoid
-a checksum/report cycle. Bundles remain local; they were not published as releases.
+`scripts/build-release.ps1 -AllowUnverified` creates a clearly named development
+ZIP with source, native assets/licenses, tests, scripts, documentation, real
+screenshots and three hash-locked Windows encryption wheels. It repeats Ruff,
+Python tests, panel tests and installed SDK check. No environment, runtime.json,
+SDK-generated declarations, research downloads, provider histories or credentials
+are payload inputs. There is no automatic deployment workflow.
 
-Run `python scripts/verify-package.py <unpacked-directory>` before installation.
-The sidecar detects accidental damage; it is not an independently signed release.
-Full native update/rollback acceptance and a signing strategy remain open.
+Every payload file is listed in SHA256SUMS.txt. Verify both staged payload and a
+fresh ZIP extraction with `python scripts/verify-package.py <directory>`.
+The ZIP SHA-256 sidecar is an integrity check, not a signed release. The final
+bundle filename/hash and test totals are recorded below after building, outside
+that ZIP, to avoid a checksum/report cycle.
 
-## Updated catalog/quality development bundle
-
-The follow-up bundle is
-`herdr-session-hub-0.1.0-dev-windows-x64-20261111203312.zip`, **4,486,735 bytes**.
-Both its staged payload and fresh extraction passed manifest verification:
-**82 files**, including independent provider modules, official artwork/license,
-genuine dark/light/community captures and the pinned development-lint recipe.
-No development state, auth or runtime configuration is included.
-
-SHA-256: `75dd9ce85597ce28e11b4a2384118bb0bd1ce938d78fdaa282ff9acffa044801`.
-This supersedes the earlier development bundle above. The report/checksum entry
-is recorded outside that ZIP after verification to avoid a checksum/report cycle.
-It remains local and `releaseReady=false`.
-
-The bundle build repeated Ruff, all **42 Python tests** (15.286 seconds), all
-**9 panel groups**, installed Herdr SDK check and locked-wheel hash verification.
-The measured 10k-record search page in this run took 0.146 seconds. Ordinary
-desktop permissions were used for link/junction safety fixtures.
-
-Git is initialized on `main` with the user-specified origin. Logical conventional
-commits are authored with the existing Git identity, without assistant names or
-authorship trailers. The user subsequently authorized pushing `main`; this does
-not authorize a production installation or a GitHub/gallery release.
-
-The authorized source push succeeded. Earlier Windows CI and CodeQL language jobs
-passed; the new source commit's two streamlined workflows were accepted but remain
-queued without runner jobs. Direct links and the precise distinction between local
-passes and pending hosted validation are in TEST_RESULTS.md.
+The previous bundle `herdr-session-hub-0.1.0-dev-windows-x64-20261111203312.zip`
+(82 files, SHA-256 `75dd9ce85597ce28e11b4a2384118bb0bd1ce938d78fdaa282ff9acffa044801`)
+is superseded by the native-acceptance bundle when listed below.

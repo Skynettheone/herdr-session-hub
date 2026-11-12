@@ -1,5 +1,11 @@
 # Native layout and theme contract
 
+The Dock header action creates a 380px native sidebar in a new personal layout
+copy, preserving the full existing tree and original files. Repeated Dock reveals
+an existing Hub, including hidden ancestor stacks. `mod.open` alone is a 440px
+dialog; installation uses `place=none`. Actual sidebar/update/rollback captures
+and acceptance are in NATIVE_ACCEPTANCE.md.
+
 The UI follows Herdr's native panel vocabulary: a compact header, semantic
 surfaces and borders, retained native text fields, focusable native buttons,
 small provider/profile controls and a scrollable history list. There is no web
