@@ -1,5 +1,24 @@
 # Test results — 2026-11-12
 
+## Release-candidate payload checkpoint
+
+Source `1b90fa48106e733923c1b4a86eadb425ef7b9adb` adds the install-only
+allowlist and a regression proving that manifested development files are refused.
+The local Windows build ran **107 Python tests in 53.854 seconds**, with 12
+platform skips, plus **17 UI host groups**, Ruff and the isolated installed
+Herdr SDK check. Its 10k list/search sample took 0.485 seconds. A fresh private
+Linux Python 3.14.10 environment ran **107 tests in 22.289 seconds**, with three
+Windows-only checks and the unavailable local native key-store check skipped.
+
+Windows/macOS/Linux hosted results, fresh candidate archive receipts and real
+installer checks are recorded in [RELEASE_REPORT.md](RELEASE_REPORT.md).
+All three hosted platform jobs passed 107 tests: Windows 95 passed / 12 platform
+skips, Linux/macOS each 104 passed / 3 Windows-only skips. Actual native key-store
+checks passed, CodeQL passed and the repository returned zero open alerts.
+The documentation/payload changes do not change native UI, accounting or provider
+launcher implementation; existing GUI/Usage/continuation evidence retains its
+recorded scope. No extra macOS/Linux desktop acceptance is inferred.
+
 ## Current platform-port checkpoint
 
 On exact source `4b32d18e15d8d3858a37060ccb8fec4eaf35d0ae`, the essential

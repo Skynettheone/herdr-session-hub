@@ -1,5 +1,57 @@
 # Release preparation report — 2026-11-12
 
+## Current 0.1.0-rc.1 install candidate
+
+Public presentation and agent setup are committed at `d6a825e`; the shared
+install-payload policy, builders and regression tests at
+`1b90fa48106e733923c1b4a86eadb425ef7b9adb`. README includes the licensed official
+logo, genuine synthetic History/Usage captures, compatibility badges, install
+snippets and an agent-install prompt. The recipe follows Herdr's native mod
+format with explicit helper setup/access and preservation of existing layouts.
+Old starter prompts are archived in source; tests, fixtures, build tools and
+audit documents remain maintainable source files, excluded from consumer ZIPs.
+Private development/account-lab homes were not deleted or used as build inputs.
+
+On that exact source, the essential
+[platform matrix](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43206594745)
+and [CodeQL](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43206594659)
+passed. Each platform ran **107 tests**: Windows **95 passed / 12 platform skips**,
+Linux/macOS each **104 passed / 3 Windows-only skips**. Actual Secret Service and
+Keychain checks passed; Windows also passed Ruff and 17 UI host groups. Zero open
+code-scanning alerts were returned after the scan. Local build times and scope
+are in TEST_RESULTS.md.
+
+The renewed real offline Windows install smoke passed tamper refusal before
+target writes, failed-swap recovery with a working old helper, interrupted
+receipt/concurrent-lock refusal, separate-runtime upgrade, immutable bundle,
+uninstall WhatIf, state retention, explicit Hub purge and unchanged
+layout/key/synthetic-original sentinels. The new Linux ZIP passed actual isolated
+Linux helper startup using only its own offline wheels. Missing Secret Service
+correctly refused state writes without plaintext fallback, and extraction still
+verified. macOS archive/source integrity and native hosted key-store/dependency
+tests passed; native desktop installation/GUI acceptance remains unverified.
+
+The artifacts below supersede the earlier development bundles. They are local,
+unpublished candidates with `releaseReady=false`: the user-required macOS/Linux
+native GUI/context acceptance still needs unavailable desktops. Native POSIX
+continuation remains disabled. Candidate naming and passing helper tests do not
+clear that gate. No production installation, tag, release or gallery listing was
+performed.
+
+### Install-only candidate receipts
+
+Windows has **58 manifest payload files**, Linux/macOS **56** each (plus the
+manifest itself). Every included source/wheel byte matches the reviewed checkout;
+only generated target version metadata differs. All three fresh ZIP extractions
+and external SHA-256 sidecars verify. The packaged Windows helper passed an
+isolated numeric refresh without changing its extracted package.
+
+| Target | Local ZIP | Bytes | SHA-256 |
+|---|---|---:|---|
+| Windows x64 | `herdr-session-hub-0.1.0-rc.1-windows-x64-20261112110737.zip` | 4,404,895 | `8200abe7aa8f4a77d9df956e73894c2e864f71bced2932b273652cf1c5235e9a` |
+| Linux x64 experimental | `herdr-session-hub-0.1.0-rc.1-linux-x64-20261112110815.zip` | 5,310,129 | `974df20fb564454c5a9e5244e589dbf39a755af725ad4195b78f77a52f865ab9` |
+| macOS arm64 experimental | `herdr-session-hub-0.1.0-rc.1-macos-arm64-20261112110820.zip` | 4,491,397 | `b6a9dadc39f00ba4f2224210f0d39f6e18960a806aa21ba97e98f12ed050c371` |
+
 ## Current native-port development candidate
 
 The user requires macOS/Linux ports before production readiness and confirmed

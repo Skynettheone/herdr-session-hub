@@ -1,4 +1,4 @@
-# Unpublished development candidate — draft notes
+# Unpublished 0.1.0-rc.1 candidate — draft notes
 
 Herdr Session Hub adds one collapsible History/Usage panel beside Files and
 Changes. Browse explicit local histories, preview/search safely, organize entries

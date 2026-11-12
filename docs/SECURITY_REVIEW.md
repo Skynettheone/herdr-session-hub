@@ -1,5 +1,23 @@
 # Implementation security review — 2026-11-12
 
+## Candidate install-payload review
+
+Reviewed the shared payload builder and platform verifier at `1b90fa4`. Install
+archives use a fixed per-platform file allowlist, exact offline wheel hashes,
+bounded manifests and existing link/private-state checks. Even a manifested
+extra source/test file is refused. Build tools and tests remain in source, and
+private development/sign-in directories are not package inputs or cleanup targets.
+No new provider access, runtime network operation or continuation capability was
+enabled by the presentation/packaging changes.
+
+Staged and freshly extracted archives match all reviewed source/wheel bytes;
+only generated platform version metadata differs. The adversarial extra-file
+regression passes. Existing checksum-tamper, path alias, link, size and platform
+mismatch tests remain in place. Checksums establish integrity against a trusted
+receipt, not publisher authentication; no signed release or independent human
+audit is claimed. Agent-install instructions require source/access review,
+explicit installation authorization and preservation of unrelated mods/settings.
+
 ## POSIX port assessment
 
 Preserved Windows DPAPI, source-sharing and continuation gates. Reviewed new
