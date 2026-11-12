@@ -65,3 +65,39 @@ Source changes through `c55af3b` passed Windows CI; final Python/JS at `1c104dc`
 passed combined CodeQL. Acceptance/docs/screenshots are committed at `1a2fc68`.
 This post-build result entry is intentionally external to the ZIP, avoiding a
 checksum/report cycle. No runtime code changed after validation.
+
+## Completed native form and privacy follow-up
+
+Source commits df50a84 and d0b19d5 fix the dedicated forms, JSON editor, duplicate
+labels, search focus and refresh completion. Native alias/reset, guided save,
+validation, JSON errors and picker cancellation passed. User-controlled Pi-only
+consent, indexing, full-text search, clear and Off cleanup passed. All profiles
+ended Off; indexed rows and marker matches were zero; original/native-file hashes
+were unchanged and native status had no errors. The disposable app/core are stopped.
+See FORM_ACCEPTANCE.md for evidence and the interrupted final screenshot boundary.
+
+The final-code build passed 53 Python tests (28.316 seconds), 12 panel groups,
+Ruff, isolated installed SDK validation and offline wheel verification. A 10k
+list/search sample took 0.270 seconds, without a performance guarantee. Windows
+CI and combined CodeQL passed on d0b19d5. The installer is unchanged from the
+previous passed install/upgrade/uninstall smoke; no redundant install was run.
+
+The final artifact refresh changes documentation and genuine captures only. The
+already-tested runtime/test/script payload is checked byte-for-byte before
+repackaging. New filename/checksum are recorded outside the archive after fresh
+extraction verification; no implementation code or dependencies changed.
+
+## Final verified form-acceptance candidate
+
+`herdr-session-hub-0.1.0-dev-windows-x64-20261112071625.zip`, **4,691,854 bytes**.
+SHA-256: `b5eae024354ed75fca2bcc6c00e14276d33f553c342b1cf312832ae416ea8acf`.
+Staging and fresh extraction both verified **100 files**, with no development
+state, credentials, provider histories or local runtime configuration. All **53**
+runtime/test/script payload files match the already-tested source byte-for-byte;
+only documentation and genuine native screenshots were refreshed after cleanup.
+The final report/checksum entry is external to the ZIP to avoid a checksum cycle.
+
+All requested remaining native form and synthetic privacy round-trip checks are
+complete. The test app/core are stopped. The package remains a local development
+candidate with the previously documented account/provider/platform limits; it
+was not installed into production or published as a release.

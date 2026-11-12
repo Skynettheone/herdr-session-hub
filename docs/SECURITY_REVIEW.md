@@ -154,3 +154,15 @@ budget/malformed Gemini sources disable launch and expose metadata-only fallback
 These earlier regression checks alone do not establish native continuity. The
 later native acceptance results above are limited to the tested CLIs and profiles. The new source review is separate from CodeQL and is not an
 independent third-party security audit. See CODE_REVIEW.md.
+
+## Native-form and search usability follow-up
+
+Source tasks df50a84 and d0b19d5 add draft/UI validation, fixed existing IDs,
+provider-switch draft clearing, explicit native field focus and clearer progress.
+Filesystem/profile consent validation remains in the helper. Manual review found
+no new network, shell, credential or original-history write path. User-controlled
+Pi indexing processed only the opted-in synthetic source; six other profiles
+stayed Off and all other providers had zero indexed bytes. Original and preserved
+native-file hashes remained unchanged. Native form/search evidence and cleanup
+status are in FORM_ACCEPTANCE.md. Both Windows CI and combined CodeQL passed on
+d0b19d5; no independent audit is claimed.

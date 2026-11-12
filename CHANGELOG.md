@@ -4,7 +4,8 @@
 
 - Simplify profile editing with dedicated guided/multiline JSON views, persistent
   Save/Cancel controls, required-field guidance, draft cancellation and fixed IDs.
-- Focus native input frames explicitly; add original-name reset.
+- Focus native input frames and search padding explicitly; add original-name reset.
+- Replace completed batch progress with a clear refresh/index completion message.
 - Remove repeated provider/profile labels while retaining meaningful account
   labels and disambiguating multiple targets. Simplify conversation tabs.
 

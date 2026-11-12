@@ -48,8 +48,8 @@ not an installation target. Real cloud checks used only new synthetic prompts.
 
 ## CI and security
 
-- [Windows tests on df50a84](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43171220253): **success**.
-- [Combined CodeQL on df50a84](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43171220200): **success**.
+- [Windows tests on d0b19d5](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43172531932): **success**.
+- [Combined CodeQL on d0b19d5](https://github.com/Skynettheone/herdr-session-hub/actions/runs/43172531856): **success**.
   This covers the latest form/label implementation and regression tests. Code-scanning API reported zero open alerts after the scan.
 - Manual assessment and six corrected findings are in SECURITY_REVIEW.md.
   The user declined Daybreak. No independent human audit is claimed.
@@ -62,7 +62,8 @@ combined CodeQL job, with stale-run cancellation. No deployment/publication job.
 The earlier scrolled-form gaps are closed by the native pass in
 FORM_ACCEPTANCE.md: alias save/reset, guided typing/save, empty-field validation,
 malformed JSON, picker cancellation and Cancel passed after the usability fixes.
-Privacy opt-in remains a user-controlled step and is recorded separately.
+User-controlled synthetic-only opt-in, native index/search, clear and Off cleanup
+passed; all profiles ended Off with zero indexed rows and unchanged originals.
 Native privacy/trust/authentication controls require user handling. Exhaustive
 GUI acceptance is not claimed. See FOLLOWUP_ACCEPTANCE.md for exact outcomes.
 

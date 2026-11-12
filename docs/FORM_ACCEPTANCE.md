@@ -44,9 +44,19 @@ confused with either real-account profile. No credential files were inspected.
 
 ## User-controlled privacy check
 
-Settings → Search is staged with all profiles Off. The user was asked to enable
-only Personal test, the synthetic Pi profile. Index/search/clear/off results will
-be recorded after that step is observed; they are not inferred from a request.
+The user enabled only Personal test, the synthetic Pi profile. Both the native
+screen and persisted flags confirmed the six other profiles remained Off. The
+native Index conversations button processed 13,579 bytes with complete Pi
+coverage; all other providers had zero indexed bytes. A body-only synthetic marker
+returned zero metadata matches and one full-text match, in both the helper and
+actual GUI. No real-account conversation text was indexed. Search-padding click
+followed by typing also passed after the focused d0b19d5 fix. The user then cleared the test index and switched Personal test Off. A fresh
+helper read verified all seven profiles Off, zero indexed rows and zero marker
+matches. Original and preserved native-file hashes were unchanged; native status
+reported errors=[]. The final screenshot attempt was interrupted by the user's
+physical Escape key, so no post-cleanup screenshot is claimed. Cleanup verification
+uses the persisted flags/index result, not an inferred click. The disposable app
+and its dedicated core were subsequently stopped through exact-scoped CLI calls.
 The computer-use skill prohibits automated in-app privacy-setting changes.
 
 ## Automated and review evidence
@@ -54,8 +64,7 @@ The computer-use skill prohibits automated in-app privacy-setting changes.
 Twelve native-host test groups pass, including required-field validation without
 writes, cancelled drafts, provider-switch state clearing, ID collision/retarget
 refusal, original-name reset and duplicate-profile-label disambiguation. Installed
-native SDK check and correctness lint passed. Hosted Windows CI on df50a84 passed;
-combined CodeQL on the same commit also passed.
+native SDK check and correctness lint passed. Hosted Windows CI and combined CodeQL on final code d0b19d5 both passed.
 
 Review of the change confirms filesystem/account validation remains in the helper;
 UI validation does not replace it. There is no new runtime dependency, shell,

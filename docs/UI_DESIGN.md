@@ -64,3 +64,10 @@ The follow-up captures `screenshots/history-tab.jpg` and
 `screenshots/history-collapsed.jpg` show the actual native right-panel integration
 at 300px with an empty center and synthetic Pi metadata. They are unmodified
 app captures; the prior wide `preview.png` remains a genuine separate layout.
+
+The form follow-up replaces the form appended below all profiles with a dedicated
+editor and fixed Save/Cancel footer. Guided and multiline JSON modes are separate.
+Inputs explicitly focus from their frames, including search padding. Redundant
+single-provider profile labels are omitted; meaningful account labels remain.
+Conversation/Details/Organize are adjacent text tabs. Genuine final native captures
+are `screenshots/content-search.jpg` and `screenshots/organization-form.jpg`.
