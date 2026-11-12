@@ -3,6 +3,14 @@
 “Implemented” below means code and stated tests exist. It does not mean all native
 provider acceptance gates passed. This is **0.1.0-dev**, not a production release.
 
+Usage is an additional view in the same History panel: native themed graphs,
+numeric breakdowns, profile/provider/UTC filters, encrypted bounded numeric
+refresh, exact local rates, recorded limits and explicit partial coverage.
+Five provider usage formats have fixtures; Copilot's persisted log omits usage.
+See [USAGE_ACCEPTANCE.md](USAGE_ACCEPTANCE.md) for GUI/arithmetic evidence and
+[USAGE_DESIGN.md](USAGE_DESIGN.md) for pricing/deduplication boundaries. Existing
+release gates remain in force.
+
 | ID | Implementation and verified scope | Remaining limits |
 |---|---|---|
 | F01 | User-invoked native command detection; explicit profiles; missing CLI does not hide history | Help/version verified locally; no default home scan |

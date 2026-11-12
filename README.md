@@ -3,11 +3,19 @@
 A native Herdr Desktop history panel for Claude Code, Codex, OpenCode, Pi, Gemini
 and Copilot, with a live capability catalog for every Herdr agent.
 
+The same panel also has a native **Usage** view: themed token/cost graphs,
+provider/profile and UTC range filters, cache metrics, model/day/project
+breakdowns, local exact-model rates and timestamped recorded limit snapshots.
+It reads local numeric history only; estimates are not subscription bills and
+missing coverage/prices stay explicit. [Usage guide](docs/USER_GUIDE.md#recorded-usage)
+and [acceptance evidence](docs/USAGE_ACCEPTANCE.md) describe the verified scope.
+
 **Development candidate — not production-ready.** The implementation and local
 test suite are present. Native Herdr continuation passed for Claude, Codex,
 OpenCode, Pi and Gemini using disposable sessions and a loopback model fixture.
-Real-cloud Claude continuation and Herdr update/rollback also passed. Exhaustive
-native controls and distinct company-account identity isolation remain open. Manual security
+Real-cloud Claude continuation and Herdr update/rollback also passed. Native
+control combinations are not exhaustively certified; distinct company-account
+identity isolation remains unverified. Manual security
 assessment and regression fixes are documented; it is not an independent audit. Production installation
 and publication have not been performed.
 

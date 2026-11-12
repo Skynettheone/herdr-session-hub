@@ -72,3 +72,20 @@ macOS/Linux/UNC/WSL remain unverified or unsupported. Original deletion, native
 transcript migration and remote sync remain explicitly unavailable. These limits
 keep `releaseReady=false`; no production installation or release publication
 was performed.
+
+## Usage follow-up — 2026-11-12
+
+The Usage addition has 23 accounting/integration regressions, bringing the
+Python suite to 76 tests, plus 17 native-host behavior groups. Recorded counters
+and estimates matched an independent synthetic oracle for all four presets.
+The actual GUI pass covered default dark, Paper light and Atom One Dark themes,
+wide/narrow layouts, filters, UTC forms, charts/breakdowns, pricing and approved
+rate/cache removal-restoration. Original hashes matched; every conversation
+search flag remained Off. A real 0.1.14 SDK check found a missing optional scroll
+export; guarded fallback now passes 0.1.14 and 0.1.15 SDK checks and cannot enable
+older-host continuation just because a newer executable appears on PATH.
+
+USAGE_ACCEPTANCE.md gives the exact native scope and oracle numbers;
+USAGE_REVIEW.md records all six review findings and confirmed fixes. Final
+runtime CI and package extraction evidence are in RELEASE_REPORT.md. CI remains
+the essential Windows job and combined CodeQL job, with no publishing workflow.

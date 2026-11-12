@@ -166,3 +166,19 @@ stayed Off and all other providers had zero indexed bytes. Original and preserve
 native-file hashes remained unchanged. Native form/search evidence and cleanup
 status are in FORM_ACCEPTANCE.md. Both Windows CI and combined CodeQL passed on
 d0b19d5; no independent audit is claimed.
+
+## Usage follow-up
+
+The Usage change adds no runtime network, credential reader, shell string,
+provider launcher or original-history write. Numeric/model/time-only caching
+uses the existing DPAPI/atomic state namespace and is excluded from portability.
+Current profile roots/exclusions/enablement reauthorize cached hits. Missing or
+changed discovery scope cannot silently establish complete zero usage.
+
+Separate standards/security and spec reviewers found six accounting/coverage
+issues, including oversized JSON integers, Gemini rewind/budget handling and
+upstream model qualification. All were fixed, regression-tested and follow-up
+resolutions confirmed. USAGE_REVIEW.md keeps the axes and findings separate.
+This is implementer-team manual/agent review, not an external human assessment.
+CI, native controls, approved cache/rate removal and unchanged originals are
+documented in USAGE_ACCEPTANCE.md. Locked dependencies are unchanged.
