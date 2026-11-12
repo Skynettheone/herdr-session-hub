@@ -40,3 +40,25 @@ extraction must pass `python scripts/verify-package.py <directory>`. ZIP SHA-256
 an integrity check, not a signature. All older ZIPs are superseded by the latest
 verified candidate listed below. Filename/hash/final test output are appended
 outside the ZIP after verification to avoid a checksum/report cycle.
+
+## Final verified candidate
+
+`herdr-session-hub-0.1.0-dev-windows-x64-20261112063431.zip`, **4,624,285 bytes**.
+SHA-256: `f0839d9b5419f671bfc6a7586d0e8fa96d094b8778ee197c929b0530cd136f4c`.
+Staging and a fresh extraction each verified **97 files**, with no development
+state, auth stores or runtime configuration. The ZIP remains local/unpublished.
+
+This build passed Ruff, **53 Python tests** in 14.997 seconds, **11 panel groups**,
+isolated installed SDK check and offline wheel hashes. Its 10k-record list/search
+sample took 0.144 seconds. The final-checker disposable install smoke passed
+offline first install, upgrade backup, uninstall WhatIf, retained state, explicit
+Hub purge and unchanged layout/key/original sentinels. The final GUI metadata
+round-trips preserved the original hash and all four header/settings/old-layout
+sentinels. Native status ended with errors=[]. The isolated app/core and loopback
+fixture were stopped; private user-created sign-in homes were retained locally,
+ignored by Git and excluded from the package, without reading or revoking them.
+
+Source changes through `c55af3b` passed Windows CI; final Python/JS at `1c104dc`
+passed combined CodeQL. Acceptance/docs/screenshots are committed at `1a2fc68`.
+This post-build result entry is intentionally external to the ZIP, avoiding a
+checksum/report cycle. No runtime code changed after validation.
