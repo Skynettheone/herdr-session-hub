@@ -36,8 +36,8 @@ single-line paragraphs, concise limits and no long dashes. Implementation flags
 and lengthy test/provenance detail stay in this report. Published ZIP, downloadable
 notes and checksum assets remain frozen; the editable release page is the current
 presentation. Repository download links are updated only after observing publication.
-No production configuration was installed or changed. The existing About/topics
-were inspected but not edited; no new gallery topic or listing was created.
+No production configuration was installed or changed. Released assets remain
+unchanged after the documentation refinements.
 
 ## Current Windows 0.1.0 stable preparation
 

@@ -3,9 +3,8 @@
 Current status: **[Windows 0.1.0 is published](https://github.com/Skynettheone/herdr-session-hub/releases/tag/v0.1.0)**
 under the user's explicit approval. Linux/macOS remain **0.1.0-experimental.1**,
 releaseReady=false, with continuation disabled and no attached stable-release
-assets. Production installation and repository About/topic changes were not
-performed. Future releases, gallery-setting changes and production installation
-need separate authorization.
+assets. Production installation was not performed. Future releases,
+gallery-setting changes and production installation need separate authorization.
 
 ## Prepared release inputs
 
@@ -34,11 +33,6 @@ deployment workflow or automatic release publisher.
 4. Add the herdr-mod topic/gallery listing only if separately authorized. Preserve
    the native mod-only repository shape, with no root layouts/ directory. A gallery
    listing is not an independent security audit or publisher signature.
-
-Suggested repository description: A native Herdr History/Usage panel for local
-agent sessions, safe continuation and recorded token/cost graphs.
-Suggested topics after listing approval: herdr-mod, herdr, claude-code, codex,
-opencode, pi-coding-agent, session-manager, developer-tools.
 
 ## Future compatibility
 

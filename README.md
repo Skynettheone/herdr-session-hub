@@ -13,10 +13,12 @@
 </p>
 <p align="center"><a href="#install">Install</a> · <a href="#history-and-usage">Features</a> · <a href="#compatibility">Compatibility</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
 
-![Session Hub running in Herdr](preview.png)
+![Herdr Session Hub showing local coding-agent session history in the native Windows sidebar](preview.png)
 
-A native Herdr Desktop mod for finding, searching, organizing and continuing local
-coding-agent sessions. **History** and **Usage** share one collapsible tab beside
+**Herdr Session Hub** is a native session history and usage dashboard for
+**Herdr Desktop on Windows**. Find, search, organize and resume local
+**Claude Code, Codex, OpenCode, Pi and Gemini** conversations. **History** and
+**Usage** share one collapsible tab beside
 **Files** and **Changes**, with Herdr's own colors, agent icons and theme behavior.
 The captures use synthetic histories; no personal conversations are shown.
 
@@ -82,7 +84,7 @@ the bundle parent's `.dev` directory. [Setup, upgrade, rollback and uninstall](d
 - **Fit your workspace.** Responsive narrow/wide layouts, collapse controls,
   keyboard-friendly fields and semantic built-in/community theme colors.
 
-![Native Usage graphs with a community theme](docs/screenshots/usage-community.png)
+![Herdr Session Hub usage dashboard with token and cache graphs in a community theme](docs/screenshots/usage-community.png)
 
 Usage is local recorded accounting. API-equivalent estimates are not subscription
 bills; recorded limit snapshots are not live account quotas.
