@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
-import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability, sidebarLayout } from '../mods/session-hub/model.js';
+import { safeText, groupRows, requestFor, canPage, launchArgs, semanticTheme, shortTime, agentCatalog, historyCapability, sidebarLayout, sessionProfiles } from '../mods/session-hub/model.js';
 
 const nativeLayout=()=>({id:'root',type:'row',theme:'custom',toast:'personal-toast',children:[
   {id:'sidebar',type:'block',content:{mod:'spaces'}},
@@ -11,6 +11,9 @@ const nativeLayout=()=>({id:'root',type:'row',theme:'custom',toast:'personal-toa
       {id:'files',type:'block',content:{mod:'files'}},{id:'changes',type:'block',content:{mod:'changes'}}]}]}]}]});
 
 test('literal transcript display, grouping, pagination and safe local launch', () => {
+  assert.deepEqual(sessionProfiles({provider:'pi',targets:['pi']},[{id:'pi',label:'Pi'}]),[]);
+  assert.equal(sessionProfiles({provider:'pi',targets:['personal']},[{id:'personal',label:'Personal'}])[0].label,'Personal');
+  assert.deepEqual(sessionProfiles({provider:'pi',targets:['personal','work']},[{id:'personal',label:'Pi'},{id:'work',label:'Pi'}]).map(p=>p.label),['Pi (personal)','Pi (work)']);
   assert.equal(safeText('hello\u202e\x1b; $(x)'), 'hello; $(x)');
   assert.equal(groupRows([{cwd:'C:/a'}, {cwd:'C:/a'}, {}]).length, 2);
   assert.deepEqual(canPage(60, 125), {previous:true, next:true});
@@ -24,7 +27,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   const pending = [], controls = new Map(), requests = [], runs = [], clipboard = [], styles=[], artwork=[];
   let palette={chrome:'chrome',surface:'surface',background:'background',foreground:'foreground',muted:'muted',dim:'dim',raised:'raised',border:'border',input:'input',hover:'hover',selected:'selected',accent:'accent',solid:'solid',solid_foreground:'solid_foreground'};
   const row = {key:'a'.repeat(64), title:'Synthetic history', cwd:'C:/Project', targets:['personal'], provider:'claude', formatSupported:true, nativeId:'11111111-2222-4333-8444-555555555555'};
-  let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',enabled:true,versionVerified:true,trustedProjects:[]}],statuses:[]};
+  let data = {rows:[row],total:1,profiles:[{id:'personal',label:'Personal',provider:'claude',roots:['C:/Account/projects'],configHome:'C:/Account',enabled:true,versionVerified:true,trustedProjects:[]}],statuses:[]};
   let fail = false, layoutState=nativeLayout();
   let listHook = async request => { if(initialHook) { const hook=initialHook;initialHook=null;await hook(request,view,cx); } };
   function element(initial) {
@@ -45,7 +48,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   const inputs=[];
   const inputState = {new({value='',placeholder}={}) {
     const handlers={};
-    const input={value:()=>value,set_value:v=>{value=v;},on:(name,fn)=>{handlers[name]=fn;},focus:()=>{},handlers,placeholder};
+    const input={value:()=>value,set_value:v=>{value=v;},on:(name,fn)=>{handlers[name]=fn;},focus:()=>{input.focusCount=(input.focusCount||0)+1;},handlers,placeholder};
     inputs.push(input); return input;
   }};
   const cx={notify(){},focus_handle(){return {};},spawn(fn){pending.push(Promise.resolve().then(()=>fn(cx)));},
@@ -81,7 +84,7 @@ async function panel(initialHook,props={},savedPanels=null) {
   const synthetic = (exports) => new vm.SyntheticModule(Object.keys(exports), function(){for(const [name,value] of Object.entries(exports))this.setExport(name,value);},{context});
   const model=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/model.js',import.meta.url),'utf8'),{context});
   const art = kind => path => {artwork.push({kind,path});return element();};
-  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image')}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(){}})},Button:{new:element},InputState:inputState,Input:{new:element}}),herdr:synthetic(host),'./model.js':model};
+  const sources={'gpui-kit':synthetic({View:class{},div:element,svg:art('svg'),image:art('image')}), 'gpui-base':synthetic({v_flex:element,h_flex:element,ScrollHandle:{new:()=>({scroll_to_item(){}})},Button:{new:element},InputState:inputState,TextareaState:inputState,Input:{new:element},Textarea:{new:element}}),herdr:synthetic(host),'./model.js':model};
   await model.link(()=>{});await model.evaluate();
   const ui=new vm.SourceTextModule(await fs.readFile(new URL('../mods/session-hub/ui.js',import.meta.url),'utf8'),{context});
   await ui.link(name=>sources[name]);await ui.evaluate();sources['./ui.js']=ui;
@@ -170,6 +173,33 @@ test('semantic theme switching and responsive conversation layout',async()=>{
   assert.ok(p.view.detail);assert.ok(p.view.preview?.messages.length);
   p.view.width=360;p.draw();await p.click('back');assert.equal(p.view.detail,null);
   assert.equal(shortTime(null),'Time unknown');
+});
+
+test('profile editing isolates drafts, validates before saving and never retargets an existing ID',async()=>{
+  const p=await panel();await p.click('settings');await p.click('new-profile');
+  let writes=()=>p.requests.filter(r=>r.action==='profile-save').length;
+  await p.click('save-profile-form');assert.match(p.view.error,/profile ID/);assert.equal(writes(),0);
+  p.view.formFields.id.set_value('new-profile');await p.click('save-profile-form');
+  assert.match(p.view.error,/history|histories/);assert.equal(writes(),0);
+  p.view.formFields.root.set_value('C:/old-account/projects');
+  p.view.formFields.configHome.set_value('C:/old-account');
+  p.view.formFields.executable.set_value('C:/old-agent.exe');
+  p.view.profileDraft={content:true,roots:['C:/old-account/projects'],trustedProjects:['C:/old-project']};
+  await p.click('form-provider-pi');
+  assert.equal(p.view.formFields.configHome.value(),'');assert.equal(p.view.formFields.root.value(),'');
+  assert.equal(p.view.formFields.executable.value(),'');assert.equal(p.view.profileDraft.content,undefined);
+  await p.click('advanced-profile');p.view.profileEditor.set_value('[]');await p.click('save-profile');
+  assert.equal(p.view.error,'Profile JSON must be an object');assert.equal(writes(),0);
+  p.view.profileEditor.set_value('{"id":"personal"}');await p.click('save-profile');
+  assert.match(p.view.error,/already in use/);assert.equal(writes(),0);
+  await p.click('cancel-profile');assert.equal(p.view.formOpen,false);
+  await p.click('edit-personal');assert.equal(p.view.advanced,false);
+  await p.click('advanced-profile');p.view.profileEditor.set_value('{"id":"another"}');await p.click('save-profile');
+  assert.match(p.view.error,/differs/);assert.equal(writes(),0);
+  p.view.key({key:'escape'},p.cx);assert.equal(p.view.formOpen,false);assert.equal(p.view.settings,true);
+  await p.click('back');await p.click('session-'+p.row.key);await p.click('organize-tab');
+  await p.click('alias-input');assert.ok(p.view.alias.focusCount>0);
+  await p.click('reset-alias');assert.equal(p.requests.findLast(r=>r.action==='annotate').alias,'');
 });
 
 test('latest search survives an in-flight list and a final refresh batch',async()=>{

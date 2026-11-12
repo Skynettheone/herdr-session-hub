@@ -1,5 +1,11 @@
 // Pure panel state helpers; native host calls stay in the View instance.
 export const providers = ["all", "claude", "codex", "opencode", "pi", "copilot", "gemini"];
+export function sessionProfiles(row, profiles) {
+  const targets = row.targets.map(id => ({id, label: safeText(profiles.find(p => p.id === id)?.label || id, 80).trim()}));
+  const normalize = value => value.trim().toLowerCase();
+  if (targets.length === 1 && [row.provider, providerName(row.provider)].some(name => normalize(name) === normalize(targets[0].label))) return [];
+  return targets.map(target => ({...target, label: targets.filter(p => normalize(p.label) === normalize(target.label)).length > 1 ? `${target.label} (${target.id})` : target.label}));
+}
 export function sidebarLayout(value) {
   let original = JSON.parse(JSON.stringify(value));
   if (!original || typeof original !== "object" || !original.id || !original.type) throw new Error("Herdr did not return a valid layout");

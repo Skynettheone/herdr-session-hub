@@ -1,5 +1,15 @@
 # Research findings — 2026-11-11
 
+## Form usability follow-up — 2026-11-12
+
+Installed 0.1.15 declarations confirm retained InputState.focus/value and normal
+GPUI event handlers. The current edit form is appended below all saved profiles,
+has no explicit Cancel, and mixes normal input with advanced JSON. This pass will
+separate list/edit views, give validation before RPC, keep native path safety in
+the helper, and add explicit name reset. Provider changes must clear stale account
+folders/command fields. Native input, picker cancellation and invalid JSON remain
+acceptance targets; no discovery/provider behavior or production state is changed.
+
 ## Follow-up research and decisions — 2026-11-12
 
 The user authorized personal/company sign-ins performed by the user in disposable

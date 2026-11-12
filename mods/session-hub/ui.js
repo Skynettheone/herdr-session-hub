@@ -1,6 +1,6 @@
 import { div, svg, image } from "gpui-kit";
-import { h_flex, v_flex, Button, Input } from "gpui-base";
-import { semanticTheme, safeText, groupRows, providers, providerName, projectName, shortTime, canPage, historyCapability } from "./model.js";
+import { h_flex, v_flex, Button, Input, Textarea } from "gpui-base";
+import { semanticTheme, safeText, groupRows, providers, providerName, projectName, shortTime, canPage, historyCapability, sessionProfiles } from "./model.js";
 
 export function renderPanel(v, cx, rawTheme) {
   const t = semanticTheme(rawTheme), wide = (v.width || 380) >= 760;
@@ -29,8 +29,9 @@ export function renderPanel(v, cx, rawTheme) {
     if (!options.iconOnly) el.child(label);
     return el;
   };
-  const input = (state, id) => div().id(id || "field-" + (state === v.search ? "search" : "input")).h(34).flex_none().px(10)
+  const input = (state, id) => div().id(id || "field-" + (state === v.search ? "search" : "input")).h(34).min_w(0).flex_none().px(10)
     .flex().items_center().rounded(7).bg(t.surface).border_1().border_color(state === v.search && v.searchFocused ? t.accent : t.input)
+    .on_click(() => state.focus())
     .child(Input.new(state).w_full().text_size(12).text_color(t.foreground));
   const label = value => text(value, t.muted, 11).font_medium();
   const section = (title, description) => v_flex().flex_none().gap(10).p(14).rounded(9).bg(t.surface).border_1().border_color(t.border)
@@ -39,7 +40,7 @@ export function renderPanel(v, cx, rawTheme) {
     .child(div().p(12).rounded(12).bg(t.surface).child(icon("history", t.muted, 24)))
     .child(text(title, t.foreground, 14).font_semibold()).child(text(description, t.muted).text_center())
     .when(!!action, e => e.child(action));
-  const profilesFor = row => row.targets.map(id => v.data.profiles.find(p => p.id === id)?.label || id).join(", ");
+  const profilesFor = row => sessionProfiles(row,v.data.profiles).map(p=>p.label).join(", ");
   const root = v_flex().id("session-hub-root").track_focus(v.handle).on_key_down((e, cx) => v.key(e, cx))
     .on_size_change((size, cx) => { if (Math.abs((v.width || 0) - size.width) > 1) { v.width = size.width; cx.notify(); } })
     .size_full().min_w(0).min_h(0).rounded(10).overflow_hidden().bg(t.chrome).border_1().border_color(t.border).text_color(t.foreground).text_size(12);
@@ -109,7 +110,8 @@ export function renderPanel(v, cx, rawTheme) {
           .child(v_flex().flex_1().min_w(0).gap(6)
             .child(text(row.title,t.foreground,12.5).font_medium().truncate())
             .child(h_flex().gap(5).items_center().child(text(providerName(row.provider),t.muted,10.5))
-              .child(text("·",t.dim,10)).child(text(profilesFor(row),t.muted,10.5).flex_1().truncate())
+              .when(!!profilesFor(row),e=>e.child(text("·",t.dim,10)).child(text(profilesFor(row),t.muted,10.5).truncate()))
+              .child(div().flex_1())
               .when(!!row.stale,e=>e.child(text("Stale",t.blocked,10))).when(!row.stale,e=>e.child(text(shortTime(row.lastConversationAt),t.muted,10))))));
       }
     }
@@ -131,12 +133,13 @@ export function renderPanel(v, cx, rawTheme) {
       .child(h_flex().gap(6).items_center().child(icon("folder",t.muted,13))
         .child(text(projectName(row.cwd),t.muted,11.5).truncate().flex_1())
         .child(button("copy-cwd","Copy project path",cx=>{cx.write_to_clipboard(row.cwd||"");v.notice="Project path copied";cx.notify();},{icon:"copy",iconOnly:true})))
-      .child(h_flex().gap(5).flex_wrap().child(agentIcon(row.provider)).child(badge(providerName(row.provider)))
-        .children(row.targets.map(id=>button("target-"+id,v.data.profiles.find(p=>p.id===id)?.label||id,cx=>{v.target=id;cx.notify();},{selected:v.target===id,height:24})))));
+      .child(h_flex().gap(6).items_center().flex_wrap().child(agentIcon(row.provider)).child(text(providerName(row.provider),t.muted,11.5))
+        .children(sessionProfiles(row,v.data.profiles).map(p=>row.targets.length===1?badge("Profile: "+p.label)
+          :button("target-"+p.id,p.label,cx=>{v.target=p.id;cx.notify();},{label:"Continue with profile: "+p.label,selected:v.target===p.id,height:24})))));
     pane.child(h_flex().px(12).gap(3).border_b_1().border_color(t.border)
       .child(button("conversation-tab","Conversation",cx=>{v.detailSection="conversation";cx.notify();},{selected:!v.detailSection||v.detailSection==="conversation"}))
       .child(button("details-tab","Details",cx=>{v.detailSection="details";cx.notify();},{selected:v.detailSection==="details"}))
-      .child(div().flex_1()).child(button("organize-tab","Organize",cx=>{v.detailSection=v.detailSection==="organize"?"conversation":"organize";cx.notify();},{icon:"more",selected:v.detailSection==="organize"})));
+      .child(button("organize-tab","Organize",cx=>{v.detailSection="organize";cx.notify();},{selected:v.detailSection==="organize"})));
     const scroll=v_flex().id("detail-body").flex_1().min_h(0).overflow_y_scrollbar().p(14).gap(12);
     if(v.detailSection==="details") {
       for(const [name,value] of [["Session ID",row.nativeId],["Project path",row.cwd||"Unknown"],["Source",row.sourcePath],["Last conversation",row.lastConversationAt||"Unknown"],
@@ -145,7 +148,9 @@ export function renderPanel(v, cx, rawTheme) {
       scroll.child(button("copy-id","Copy session ID",cx=>{cx.write_to_clipboard(row.nativeId);v.notice="Session ID copied";cx.notify();},{icon:"copy",outline:true}));
     } else if(v.detailSection==="organize") {
       scroll.child(section("Display name","Only changes the name shown in Session Hub.").child(input(v.alias,"alias-input"))
-        .child(button("save-alias","Save name",cx=>v.annotate(cx,{alias:v.alias.value()}),{primary:true})));
+        .child(button("save-alias","Save name",cx=>v.annotate(cx,{alias:v.alias.value()}),{primary:true}))
+        .child(button("reset-alias","Use original name",cx=>{v.alias.set_value("");v.annotate(cx,{alias:""});},{outline:true}))
+        .child(text("Leave the name empty to show the provider's original title.",t.muted,11)));
       scroll.child(section("Organization","Your provider's conversation stays unchanged.")
         .child(h_flex().gap(6).flex_wrap().child(button("archive",row.archived?"Unarchive":"Archive",cx=>v.annotate(cx,{archived:!row.archived}),{icon:"archive",outline:true}))
           .child(button("remove",row.removed?"Restore to history":"Remove from Hub",cx=>v.annotate(cx,{removed:!row.removed}),{outline:true})))
@@ -191,22 +196,32 @@ export function renderPanel(v, cx, rawTheme) {
     for(const [id,name] of [["profiles","Profiles"],["agents","Agents"],["search","Search"],["portability","Portability"]]) tabs.child(button("settings-"+id,name,cx=>{v.settingsSection=id;cx.notify();},{selected:(v.settingsSection||"profiles")===id}));
     const body=v_flex().id("settings-body").flex_1().min_h(0).overflow_y_scrollbar().p(14).gap(12);
     const page=v.settingsSection||"profiles";
-    if(page==="profiles") {
+    if(page==="profiles" && !v.formOpen) {
       body.child(h_flex().gap(8).items_center().child(text("Connected profiles",t.foreground,13).font_semibold().flex_1())
-        .child(button("new-profile","Add profile",cx=>{v.profileDraft={};v.formOpen=true;for(const f of Object.values(v.formFields))f.set_value("");cx.notify();},{icon:"plus",outline:true})));
+        .child(button("new-profile","Add profile",cx=>v.newProfile(cx),{icon:"plus",outline:true})));
       for(const p of v.data.profiles) body.child(v_flex().p(12).gap(8).rounded(8).bg(t.surface).border_1().border_color(t.border)
         .child(h_flex().gap(7).items_center().child(text(p.label,t.foreground,12.5).font_medium().flex_1()).child(badge(providerName(p.provider))))
         .child(text(p.cliVersion||(p.versionVerified?"Command verified":"Command not checked"),t.muted,11))
         .child(h_flex().gap(5).child(button("edit-"+p.id,"Edit profile",cx=>v.editProfile(p,cx),{outline:true}))
           .child(button("verify-"+p.id,"Check version",cx=>v.perform(cx,{action:"verify-version",profile:p.id},r=>{v.notice=r.verified?"Provider command verified":"Command version is unsupported";}),{outline:true}))));
-      if(v.formOpen||!v.data.profiles.length) {
+      if(!v.data.profiles.length) body.child(empty("Connect your first profile","Choose an agent and its history folder. Nothing is scanned until you save a profile and refresh."));
+    } else if(page==="profiles") {
         const form=section(v.profileDraft.id?"Edit profile":"Connect a profile","Use a separate profile for each account. Credentials stay with the provider.");
-        form.child(h_flex().gap(3).flex_wrap().children(providers.filter(p=>p!=="all").map(p=>button("form-provider-"+p,providerName(p),cx=>{v.formProvider=p;v.profileDraft={};cx.notify();},{selected:v.formProvider===p,agent:p}))));
-        form.child(label("Profile ID")).child(input(v.formFields.id,"profile-id-input")).child(label("Display label")).child(input(v.formFields.label,"profile-label-input"));
+        form.child(button("advanced-profile",v.advanced?"Use guided setup":"Advanced JSON",cx=>{v.advanced=!v.advanced;v.error="";cx.notify();},{icon:v.advanced?"back":"chevron-right",outline:true}));
+        if(v.advanced) form.child(text("Edit the complete profile JSON, including extra roots and exclusions. Keep the existing ID when editing. These values are saved instead of the guided fields.",t.muted,11))
+          .child(div().id("profile-json-input").h(260).min_w(0).flex_none().p(10).rounded(7).bg(t.surface).border_1().border_color(t.input)
+            .on_click(()=>v.profileEditor.focus()).child(Textarea.new(v.profileEditor).size_full().text_size(12).text_color(t.foreground)));
+        else {
+        if(v.editingProfile) form.child(label("Agent: "+providerName(v.formProvider))).child(label("Profile ID: "+v.editingProfile));
+        else form.child(h_flex().gap(3).flex_wrap().children(providers.filter(p=>p!=="all").map(p=>button("form-provider-"+p,providerName(p),cx=>v.newProfile(cx,p),{selected:v.formProvider===p,agent:p}))))
+          .child(label("Profile ID")).child(input(v.formFields.id,"profile-id-input"))
+          .child(text("A unique local name, for example personal-claude. No account email needed.",t.muted,11));
+        form.child(label("Display label")).child(input(v.formFields.label,"profile-label-input"));
         for(const [field,heading,buttonId] of [["root","Session directory","pick-root"],["configHome","Account / config directory","pick-config"]]) form.child(label(heading))
           .child(h_flex().gap(6).child(input(v.formFields[field],field+"-input").flex_1())
             .child(button(buttonId,"Choose folder",cx=>v.chooseFolder(cx,field),{icon:"folder",iconOnly:true,outline:true})));
         form.child(label("Provider command")).child(input(v.formFields.executable,"executable-input"))
+          .child(text("Use Detect to find the installed command. Leave empty to browse history without continuation.",t.muted,11))
           .child(button("detect-command","Detect installed command",cx=>v.perform(cx,{action:"probe"},r=>{
             const found=r.providers[v.formProvider];v.formFields.executable.set_value(found.executable||"");v.formFields.launchScript.set_value(found.launchScript||"");
             v.notice=found.installed?"Command found. Select the account folders explicitly.":found.state;
@@ -215,15 +230,9 @@ export function renderPanel(v, cx, rawTheme) {
         if(v.formProvider==="gemini") form.child(label("Original project path (optional)")).child(input(v.formFields.projectPath,"gemini-project-input"))
           .child(text("Gemini records a project hash. Resume stays unavailable unless this exact path matches it. Extra workspace directories are not used as the original project.",t.muted,11));
         form.child(button("content-opt-in",v.profileDraft.content?"Conversation search enabled":"Metadata search only",cx=>{v.profileDraft.content=!v.profileDraft.content;cx.notify();},{selected:!!v.profileDraft.content,outline:true}))
-          .child(text("Conversation search is optional. Indexed text stays encrypted on this computer.",t.muted,11))
-          .child(button("save-profile-form","Save profile",cx=>v.saveProfile(cx),{primary:true}))
-          .child(button("advanced-profile","Advanced configuration",cx=>{v.advanced=!v.advanced;cx.notify();},{icon:v.advanced?"chevron-down":"chevron-right"}));
-        if(v.advanced) form.child(text("Multiple roots and excluded paths can be configured as profile JSON.",t.muted,11)).child(input(v.profileEditor,"profile-json-input"))
-          .child(button("save-profile","Save profile JSON",cx=>{
-            try{v.perform(cx,{action:"profile-save",profile:JSON.parse(v.profileEditor.value())});}catch(_){v.error="Profile JSON is invalid";cx.notify();}
-          },{outline:true}));
+          .child(text("Conversation search is optional. Indexed text stays encrypted on this computer.",t.muted,11));
+        }
         body.child(form);
-      }
     } else if(page==="agents") {
       body.child(text("Agents from Herdr",t.foreground,14).font_semibold())
         .child(text("This catalog follows your installed Herdr, including custom agents. History support depends on a verified local format, separately from whether Herdr can start an agent.",t.muted,11.5));
@@ -231,7 +240,7 @@ export function renderPanel(v, cx, rawTheme) {
       for(const agent of v.agents) body.child(section(agent.name)
         .child(h_flex().gap(8).items_center().child(agentIcon(agent.key,20)).child(badge(agent.installed?"Command detected":"Command not detected")))
         .child(text(historyCapability(agent),agent.history?t.muted:t.blocked,11.5))
-        .when(agent.history,e=>e.child(button("connect-"+agent.key,"Connect profile",cx=>{v.formProvider=agent.key;v.settingsSection="profiles";v.profileDraft={};v.formOpen=true;for(const f of Object.values(v.formFields))f.set_value("");cx.notify();},{outline:true}))));
+        .when(agent.history,e=>e.child(button("connect-"+agent.key,"Connect profile",cx=>{v.settingsSection="profiles";v.newProfile(cx,agent.key);},{outline:true}))));
     } else if(page==="search") {
       body.child(section("Conversation search","Choose the profiles whose conversation text you want searchable. Metadata search works without opting in.")
         .children(v.data.profiles.map(p=>h_flex().gap(8).items_center().child(text(p.label,t.foreground).flex_1())
@@ -252,7 +261,12 @@ export function renderPanel(v, cx, rawTheme) {
         .children([...(v.portable?.foreign||[]),...(v.portable?.conflicts||[])].map(item=>v_flex().gap(4).child(text(item.alias||"Unnamed metadata",t.foreground)).child(text(providerName(item.provider)+" · "+item.nativeId,t.muted,10.5)))));
       body.child(text("Native transcript migration, original deletion and remote sync are unavailable.",t.muted,11));
     }
-    return v_flex().flex_1().min_h(0).child(tabs).child(body);
+    const settings=v_flex().flex_1().min_h(0).child(tabs).child(body);
+    if(page==="profiles" && v.formOpen) settings.child(h_flex().flex_none().gap(8).p(12).border_t_1().border_color(t.border)
+      .child(button("cancel-profile","Cancel",cx=>v.cancelProfile(cx),{outline:true}).flex_1())
+      .child(v.advanced?button("save-profile","Save profile JSON",cx=>v.saveProfileJson(cx),{primary:true}).flex_1()
+        :button("save-profile-form","Save profile",cx=>v.saveProfile(cx),{primary:true}).flex_1()));
+    return settings;
   }
 
   if(v.settings) root.child(settingsPane());

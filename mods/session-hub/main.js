@@ -1,5 +1,5 @@
 import { View } from "gpui-kit";
-import { InputState } from "gpui-base";
+import { InputState, TextareaState } from "gpui-base";
 import { appHome, readTextFile, writeTextFile, exec, run, theme, focused, spaces, nextCommand, pickFolder, knownAgents, layout, closeOverlay, props as modProps } from "herdr";
 import { safeText, requestFor, launchArgs, agentCatalog, sidebarLayout } from "./model.js";
 import { renderPanel } from "./ui.js";
@@ -24,7 +24,7 @@ export default class SessionHub extends View {
     this.search = InputState.new({ placeholder: "Search titles, projects, IDs…" });
     this.alias = InputState.new({ placeholder: "Display alias (Hub only)" });
     this.projectConfirm = InputState.new({ placeholder: "Type the exact project path to trust" });
-    this.profileEditor = InputState.new({ placeholder: "Paste a profile JSON object" });
+    this.profileEditor = TextareaState.new({ placeholder: "Paste a profile JSON object", rows: 12 });
     this.bundlePath = InputState.new({ placeholder: "Absolute encrypted bundle file (.hsh)" });
     this.formProvider = "claude"; this.profileDraft = {}; this.detected = null;
     this.formFields = {};
@@ -188,24 +188,58 @@ export default class SessionHub extends View {
     });
   }
   annotate(cx, patch) { this.perform(cx, { action: "annotate", key: this.detail.key, ...patch }); }
+  newProfile(cx, provider = this.formProvider) {
+    this.formProvider = provider; this.profileDraft = {}; this.editingProfile = null;
+    this.formOpen = true; this.advanced = false; this.error = "";
+    for (const field of Object.values(this.formFields)) field.set_value("");
+    this.profileEditor.set_value(""); cx.notify();
+  }
+  cancelProfile(cx) {
+    this.formOpen = false; this.profileDraft = {}; this.editingProfile = null;
+    this.advanced = false; this.error = ""; cx.notify();
+  }
   editProfile(profile, cx) {
     this.profileDraft = { ...profile }; this.formProvider = profile.provider; this.formOpen = true;
+    this.editingProfile = profile.id; this.advanced = false; this.error = "";
     for (const [name, field] of Object.entries(this.formFields)) field.set_value(name === "root" ? profile.roots?.[0] || "" : profile[name] || "");
-    this.profileEditor.set_value(JSON.stringify(profile)); cx.notify();
+    this.profileEditor.set_value(JSON.stringify(profile, null, 2)); cx.notify();
   }
   saveProfile(cx) {
     const value = name => this.formFields[name].value().trim();
+    const missing = !/^[a-zA-Z0-9_-]{1,60}$/.test(value("id")) ? ["id", "Use a profile ID with 1–60 letters, numbers, hyphens or underscores."]
+      : !value("root") ? ["root", "Choose the folder containing this profile's session histories."]
+      : !value("configHome") ? ["configHome", "Choose this profile's account / config folder."] : null;
+    if (missing) { this.error = missing[1]; this.formFields[missing[0]].focus(); cx.notify(); return; }
     const p = { ...this.profileDraft, provider: this.formProvider, id: value("id"), label: value("label"),
       roots: [value("root"), ...(this.profileDraft.roots || []).slice(1)], configHome: value("configHome"), executable: value("executable"),
       launchScript: value("launchScript") || undefined, content: !!this.profileDraft.content, enabled: this.profileDraft.enabled !== false };
     p.projectPath = this.formProvider === "gemini" ? value("projectPath") : undefined;
     // Directory mappings are derived by the helper, never silently inherited from an edited provider.
     delete p.env;
-    this.perform(cx, { action: "profile-save", profile: p }, () => { this.notice = "Profile saved. Check its CLI version, then refresh."; });
+    this.persistProfile(cx, p);
+  }
+  saveProfileJson(cx) {
+    let profile;
+    try { profile = JSON.parse(this.profileEditor.value()); }
+    catch (_) { this.error = "Profile JSON is invalid"; cx.notify(); return; }
+    if (!profile || Array.isArray(profile) || typeof profile !== "object") {
+      this.error = "Profile JSON must be an object"; cx.notify(); return;
+    }
+    this.persistProfile(cx, profile);
+  }
+  persistProfile(cx, profile) {
+    if ((this.editingProfile && profile.id !== this.editingProfile) ||
+        (!this.editingProfile && this.data.profiles.some(p => p.id === profile.id))) {
+      this.error = "That profile ID is already in use or differs from the profile being edited. Cancel and edit that profile instead.";
+      cx.notify(); return;
+    }
+    this.perform(cx, { action: "profile-save", profile }, () => {
+      this.cancelProfile(cx); this.notice = "Profile saved. Check its command version, then refresh history.";
+    });
   }
   chooseFolder(cx, field) {
     cx.spawn(async cx => {
-      try { const folder = await pickFolder({ prompt: "Use this explicit profile folder" }); if (folder) this.formFields[field].set_value(folder); }
+      try { const folder = await pickFolder({ prompt: field === "root" ? "Choose the session-history folder" : "Choose this profile's account / config folder" }); if (folder) this.formFields[field].set_value(folder); }
       catch (_) { this.error = "Folder selection failed"; }
       cx.notify();
     });
@@ -229,7 +263,10 @@ export default class SessionHub extends View {
     });
   }
   key(event, cx) {
-    if (event.key === "escape") { this.detail = null; this.settings = false; cx.notify(); }
+    if (event.key === "escape") {
+      if (this.settings && this.formOpen) this.cancelProfile(cx);
+      else { this.detail = null; this.settings = false; cx.notify(); }
+    }
     if (event.key === "f5") { this.refresh(cx); cx.stop_propagation(); }
     if ((event.key === "f" && event.modifiers?.control) || (event.key === "/" && !this.activeInput)) {
       this.search.focus(); cx.stop_propagation();

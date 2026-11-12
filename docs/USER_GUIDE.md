@@ -239,3 +239,22 @@ Copilot profiles select the explicit Copilot home and `session-state` subtree.
 `events.jsonl` beneath UUID directories is read without starting Copilot. The
 installed VS Code shim is not a usable CLI, so Continue remains disabled. No
 auto-install or cloud API fallback runs. Rewind/truncation preview is partial.
+
+## Profile form shortcuts
+
+Add profile and Edit profile open a dedicated editor. Save and Cancel stay visible
+at the bottom while fields scroll. Escape cancels the draft and returns to the
+profile list. Invalid IDs or missing required folders are highlighted before a
+save is sent to the helper; filesystem checks still run in the helper. Existing
+profile IDs/providers stay fixed, so creating a different account requires Add
+profile. Switching agents in a new draft clears old folders and commands.
+
+Advanced JSON opens a separate multiline editor with its own Save profile JSON
+action. It saves that JSON instead of guided-field edits. Cancel discards the
+unsaved JSON. The existing ID must remain unchanged; a new draft cannot overwrite
+another saved profile. No credential values belong in either editor.
+
+Organize → Use original name clears only the Hub alias. Agent names appear once;
+a single profile named after its agent is omitted as redundant. Distinct profile
+labels remain visible. Multiple profiles always remain selectable, with IDs added
+when their labels would otherwise look identical.
